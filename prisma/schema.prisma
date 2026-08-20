@@ -1,0 +1,129 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum RoleNameEnum {
+  STUDENT
+  HOSTEL_ADMIN
+}
+
+model Role {
+  id       Int          @id @default(autoincrement())
+  roleName RoleNameEnum @unique
+
+  users User[]
+}
+
+enum UserStatusEnum {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model User {
+  id           Int            @id @default(autoincrement())
+  email        String         @unique
+  passwordHash String
+  status       UserStatusEnum @default(ACTIVE)
+
+  roleId Int
+
+  studentProfile     StudentProfile?    
+  hostelAdminProfile HostelAdminProfile? 
+
+  role                            Role    @relation(fields: [roleId], references: [id])
+}
+
+model College {
+  id                Int    @id @default(autoincrement())
+  collegeName       String @unique
+  location          String
+  contactPersonName String
+  contactNumber     String
+
+  hostels     Hostel[]
+  departments Department[]
+}
+
+model Hostel {
+  id                Int    @id @default(autoincrement())
+  hostelName        String
+  location          String
+  latitude          Float
+  longitude         Float
+  contactPersonName String
+  contactNumber     String
+
+  collegeId Int
+
+  hostelAdmins HostelAdminProfile[]
+  college      College              @relation(fields: [collegeId], references: [id])
+  rooms        Room[]
+
+  @@unique([collegeId, hostelName])
+}
+
+model Department {
+  id                Int    @id @default(autoincrement())
+  departmentName    String
+  hodName           String
+  contactPersonName String
+  contactNumber     String
+
+  collegeId Int
+
+  students StudentProfile[]
+
+  college College @relation(fields: [collegeId], references: [id])
+
+  @@unique([collegeId, departmentName])
+}
+
+model Room {
+  id         Int    @id @default(autoincrement())
+  roomNumber String
+  capacity   Int
+
+  hostelId        Int
+  hostel          Hostel           @relation(fields: [hostelId], references: [id])
+  studentProfiles StudentProfile[]
+
+  @@unique([hostelId, roomNumber])
+}
+
+model StudentProfile {
+  id                 Int  @id   @default(autoincrement())
+  studentName        String
+  contactNumber      String @unique
+  parentMobileNumber String
+
+  userId       Int  @unique
+  departmentId Int
+  roomId       Int?
+
+  user User @relation(fields: [userId], references: [id])
+  department Department @relation(fields: [departmentId], references: [id])
+  room       Room?      @relation(fields: [roomId], references: [id])
+  
+}
+
+model HostelAdminProfile {
+  id              Int   @id @default(autoincrement())
+  hostelAdminName String
+  contactNumber   String @unique
+
+  userId   Int @unique
+  hostelId Int
+
+  user User @relation(fields: [userId], references: [id])
+  hostel Hostel @relation(fields: [hostelId], references: [id])
+}
