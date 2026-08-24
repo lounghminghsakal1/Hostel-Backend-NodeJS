@@ -30,10 +30,11 @@ enum UserStatusEnum {
 }
 
 model User {
-  id           Int            @id @default(autoincrement())
-  email        String         @unique
-  passwordHash String
-  status       UserStatusEnum @default(ACTIVE)
+  id                 Int            @id @default(autoincrement())
+  email              String         @unique
+  passwordHash       String
+  status             UserStatusEnum @default(ACTIVE)
+  mustChangePassword Boolean        @default(false)
 
   roleId Int
 

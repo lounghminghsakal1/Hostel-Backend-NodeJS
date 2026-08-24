@@ -3,6 +3,9 @@ import startServerAndConnectDB from "./server.js";
 import authRouter from "./modules/auth/auth.routes.js";
 import gloabalErrorHandlerMiddleware from "./middlewares/global-error-handler.middleware.js";
 import envValues from "./configs/envFile.js";
+import hostelAdminRouter from "./modules/hostel-admins/hostel-admins.routes.js";
+import studentRouter from "./modules/students/student.routes.js";
+import hostelRouter from "./modules/hostels/hostel.routes.js";
 
 const app = express();
 
@@ -12,6 +15,11 @@ app.use(express.json());
 
 app.use(`${prefix_api}/auth`, authRouter);
 
+app.use(`${prefix_api}/hostel_admins`, hostelAdminRouter);
+
+app.use(`${prefix_api}/students`, studentRouter);
+
+app.use(`${prefix_api}/hostels`, hostelRouter);
 
 app.use(gloabalErrorHandlerMiddleware);
 
