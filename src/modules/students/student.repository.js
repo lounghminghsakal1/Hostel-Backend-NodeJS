@@ -159,6 +159,20 @@ const updateStatusOfStudent = async (userId, status) => {
   return updatedStudent;
 };
 
+const updateRoomOfThestudent = async (studentId, roomId) => {
+  return prisma.studentProfile.update({
+    where: {
+      id: studentId 
+    },
+    data: {
+      roomId: roomId
+    },
+    include: {
+      room: true
+    }
+  });
+};
+
 const StudentRepository = {
   findUserByEmail,
   findStudentProfileByContactNumber,
@@ -174,7 +188,8 @@ const StudentRepository = {
   findStudentProfileById,
   updateStudentProfile,
   findUserById,
-  updateStatusOfStudent
+  updateStatusOfStudent,
+  updateRoomOfThestudent
 };
 
 export default StudentRepository;

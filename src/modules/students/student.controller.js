@@ -26,12 +26,18 @@ const updateStatusOfStudent = async (req, res) => {
   return Responses.successResponse(res, "Student's status updated successfully", updatedStudent);
 };
 
+const changeOrAssignStudentRoom = async (req, res) => {
+  const StudentProfile = await StudentService.changeOrAssignStudentRoom(req.user.hostelAdminProfile.hostelId, Number(req.params.id), req.body.roomId);
+  return Responses.successResponse(res, "Student room changed or assigned successfully", StudentProfile);
+};
+
 const StudentController = {
   createStudent,
   getAllStudentProfiles,
   getOneStudentProfile,
   updateStudentProfile,
-  updateStatusOfStudent
+  updateStatusOfStudent,
+  changeOrAssignStudentRoom
 };
 
 export default StudentController;

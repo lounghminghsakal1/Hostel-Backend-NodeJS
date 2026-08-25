@@ -14,3 +14,7 @@ export const updateStudentProfileRequestSchema = createStudentProfileRequestSche
 export const updateStudentStatusRequestSchema = z.object({
   status: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED"])
 });
+
+export const changeOrAssignStudentRoomRequestSchema = z.object({
+  roomId: z.int().positive()
+});

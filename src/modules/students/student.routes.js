@@ -3,7 +3,7 @@ import authenticateUserMiddleware from "../../middlewares/authentication.middlew
 import authorizeUserMiddleware from "../../middlewares/authorization.middleware.js";
 import StudentController from "./student.controller.js";
 import validateRequestMiddleware from "../../middlewares/validate-request.middleware.js";
-import { createStudentProfileRequestSchema, updateStudentProfileRequestSchema, updateStudentStatusRequestSchema } from "./student.request-schema.js";
+import { changeOrAssignStudentRoomRequestSchema, createStudentProfileRequestSchema, updateStudentProfileRequestSchema, updateStudentStatusRequestSchema } from "./student.request-schema.js";
 
 const studentRouter = express.Router();
 
@@ -18,5 +18,8 @@ studentRouter.get("/:id", authenticateUserMiddleware, authorizeUserMiddleware(ho
 studentRouter.patch("/:id", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware(updateStudentProfileRequestSchema) ,StudentController.updateStudentProfile);
 
 studentRouter.patch("/:id/status", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware(updateStudentStatusRequestSchema), StudentController.updateStatusOfStudent);
+
+
+studentRouter.patch("/:id/room", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware(changeOrAssignStudentRoomRequestSchema), StudentController.changeOrAssignStudentRoom);
 
 export default studentRouter;

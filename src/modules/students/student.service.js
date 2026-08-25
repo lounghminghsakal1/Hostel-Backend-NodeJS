@@ -157,13 +157,36 @@ const updateStatusOfStudent = async (studentId, status) => {
   return StudentRepository.findStudentProfileById(studentId);
 };
 
+const changeOrAssignStudentRoom = async (loggedAdminHostelId, studentId, roomId) => {
+  //check student with id present or not
+  const studentProfile = await StudentRepository.findStudentProfileById(studentId);
+  if(!studentProfile) throw createHttpError(404, `Student with id ${studentId} not found`, {errors: "Invalid student id"});
+
+  //check room with id present or not
+  const room = await StudentRepository.findRoomById(prisma, roomId);
+  if(!room) throw createHttpError(404, `Room not found with id ${roomId}`, {errors: "Invalid room id"});
+
+  //room.hostel id must match with logged admin hostel id
+  if(room.hostelId !== loggedAdminHostelId) throw createHttpError(409, `This room doesn't belongs to your hostel`, {errors: "Invalid room id"});
+
+  //check room has capacity or not 
+  if(room._count.studentProfiles === room.capacity) throw createHttpError(409, `Room is alread full (capacity - ${room.capacity})`, {errors: "Room is full"});
+
+  //ok now room has capacity so now can assign (or change) that room to that student
+  const roomAssignedOrChangedStudentProfile = await StudentRepository.updateRoomOfThestudent(studentId, roomId);
+  
+  return roomAssignedOrChangedStudentProfile; 
+
+};
+
 
 const StudentService = {
   createStudent,
   getAllStudentProfiles,
   getOneStudentProfileById,
   updateStudentProfile,
-  updateStatusOfStudent
+  updateStatusOfStudent,
+  changeOrAssignStudentRoom
 };
 
 export default StudentService;
