@@ -74,7 +74,7 @@ const createUser = async (tx, email, passwordHash, roleId, collegeId) => {
   });
 };
 
-const createStudentProfile = async (tx, studentName, contactNumber, parentMobileNumber, userId, departmentId, roomId, collegeId) => {
+const createStudentProfile = async (tx, studentName, contactNumber, parentMobileNumber, userId, departmentId, roomId, collegeId, hostelId) => {
   return await tx.studentProfile.create({
     data: {
       studentName: studentName,
