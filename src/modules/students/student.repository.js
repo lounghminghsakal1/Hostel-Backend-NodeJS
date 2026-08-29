@@ -17,10 +17,11 @@ const findStudentProfileByContactNumber = async (tx, contactNumber) => {
   });
 };
 
-const findDepartmentById = async (tx, departmentId) => {
-  const department = await tx.department.findUnique({
+const findDepartmentById = async (tx, departmentId, collegeId) => {
+  const department = await tx.department.findFirst({
     where: {
-      id: departmentId
+      id: departmentId,
+      collegeId: collegeId
     }
   });
   return department;
@@ -34,10 +35,11 @@ const findHostelById = async (tx, hostelId) => {
   });
 };
 
-const findRoomById = async (tx, roomId) => {
-  return await tx.room.findUnique({
+const findRoomById = async (tx, roomId, hostelId) => {
+  return await tx.room.findFirst({
     where: {
-      id: roomId
+      id: roomId,
+      hostelId: hostelId
     },
     select: {
       id: true,
@@ -52,7 +54,7 @@ const findRoomById = async (tx, roomId) => {
   });
 };
 
-const findRoleById = (tx, roleName) => {
+const findRoleByRoleName = (tx, roleName) => {
   return tx.role.findUnique({
     where: {
       roleName: roleName
@@ -60,17 +62,19 @@ const findRoleById = (tx, roleName) => {
   });
 };
 
-const createUser = async (tx, email, passwordHash, roleId) => {
+const createUser = async (tx, email, passwordHash, roleId, collegeId) => {
   return tx.user.create({
     data: {
       email: email,
       passwordHash: passwordHash,
-      roleId: roleId
+      roleId: roleId,
+      collegeId: collegeId,
+      mustChangePassword: true
     }
   });
 };
 
-const createStudentProfile = async (tx, studentName, contactNumber, parentMobileNumber, userId, departmentId, roomId) => {
+const createStudentProfile = async (tx, studentName, contactNumber, parentMobileNumber, userId, departmentId, roomId, collegeId) => {
   return await tx.studentProfile.create({
     data: {
       studentName: studentName,
@@ -78,19 +82,28 @@ const createStudentProfile = async (tx, studentName, contactNumber, parentMobile
       parentMobileNumber: parentMobileNumber,
       userId: userId,
       departmentId: departmentId,
-      roomId: roomId ?? null
+      roomId: roomId ?? null,
+      collegeId: collegeId,
+      hostelId: hostelId
     }
   });
 };
 
-const getAllStudentProfiles = async () => {
-  return await prisma.studentProfile.findMany();
+const getAllStudentProfiles = async (hostelId, collegeId) => {
+  return await prisma.studentProfile.findMany({
+    where: {
+      hostelId: hostelId,
+      collegeId: collegeId
+    }
+  });
 };
 
-const getOneStudentProfileById = async (id) => {
-  return await prisma.studentProfile.findUnique({
+const getOneStudentProfileById = async (id, hostelId, collegeId) => {
+  return await prisma.studentProfile.findFirst({
     where: {
-      id: id
+      id: id,
+      hostelId: hostelId,
+      collegeId: collegeId
     }
   });
 };
@@ -111,13 +124,16 @@ const updateEmailOfUser = async (tx, userId, email) => {
   });
 };
 
-const findStudentProfileById = async (id) => {
-  const studentProfile = await prisma.studentProfile.findUnique({
+const findStudentProfileById = async (id, hostelId, collegeId) => {
+  const studentProfile = await prisma.studentProfile.findFirst({
     where: {
-      id: id
+      id: id,
+      hostelId: hostelId,
+      collegeId: collegeId
     },
     include: {
-      user: true
+      user: true,
+      room:true
     }
   });
   return studentProfile;
@@ -179,7 +195,7 @@ const StudentRepository = {
   findDepartmentById,
   findHostelById,
   findRoomById,
-  findRoleById,
+  findRoleByRoleName,
   createUser,
   createStudentProfile,
   getAllStudentProfiles,

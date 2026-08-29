@@ -1,18 +1,16 @@
 import { prisma } from "../../configs/db.js";
 
-const findRoomByRoomNumberWithinHostel = async (hostelId, roomNumber) => {
-  const room = await prisma.room.findUnique({
+const findRoomByRoomNumberWithinHostel = async (hostelId, collegeId, roomNumber) => {
+  const room = await prisma.room.findFirst({
     where: {
-      hostelId_roomNumber: {
-        hostelId: hostelId,
-        roomNumber: roomNumber
-      }
+      hostelId: hostelId,
+      roomNumber: roomNumber
     }
   });
   return room;
 };
 
-const createRoom = async(hostelId, roomNumber, capacity) => {
+const createRoom = async (hostelId, roomNumber, capacity) => {
   const createdRoom = await prisma.room.create({
     data: {
       roomNumber: roomNumber,
@@ -23,18 +21,19 @@ const createRoom = async(hostelId, roomNumber, capacity) => {
   return createdRoom;
 };
 
-const getRooms = async (hostelId) => {
+const getRooms = async (hostelId, collegeId) => {
   return await prisma.room.findMany({
     where: {
-      hostelId: hostelId
-    } 
+      hostelId: hostelId,
+    }
   });
 };
 
-const findRoomById = async (id) => {
-  return await prisma.room.findUnique({
+const findRoomById = async (id, hostelId, collegeId) => {
+  return await prisma.room.findFirst({
     where: {
-      id: id
+      id: id,
+      hostelId,
     },
     select: {
       id: true,

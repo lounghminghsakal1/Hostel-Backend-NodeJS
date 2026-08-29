@@ -22,4 +22,7 @@ studentRouter.patch("/:id/status", authenticateUserMiddleware, authorizeUserMidd
 
 studentRouter.patch("/:id/room", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware(changeOrAssignStudentRoomRequestSchema), StudentController.changeOrAssignStudentRoom);
 
+
+
+
 export default studentRouter;

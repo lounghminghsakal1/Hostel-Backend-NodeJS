@@ -7,6 +7,7 @@ import hostelAdminRouter from "./modules/hostel-admins/hostel-admins.routes.js";
 import studentRouter from "./modules/students/student.routes.js";
 import hostelRouter from "./modules/hostels/hostel.routes.js";
 import roomsRouter from "./modules/rooms/room.routes.js";
+import leaveApplicationRouter from "./modules/leave-applications/leave-appln.routes.js";
 
 const app = express();
 
@@ -23,6 +24,8 @@ app.use(`${prefix_api}/students`, studentRouter);
 app.use(`${prefix_api}/hostels`, hostelRouter);
 
 app.use(`${prefix_api}/rooms`, roomsRouter);
+
+app.use(`${prefix_api}/leave_applications`, leaveApplicationRouter);
 
 app.use(gloabalErrorHandlerMiddleware);
 

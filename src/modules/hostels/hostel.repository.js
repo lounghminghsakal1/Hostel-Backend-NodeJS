@@ -1,19 +1,23 @@
 import { prisma } from "../../configs/db.js";
 
-const findHostelById = async (hostelId) => {
-  return await prisma.hostel.findUnique({
+const findHostelById = async (hostelId, collegeId) => {
+  return await prisma.hostel.findFirst({
     where: {
-      id: hostelId
+      id: hostelId,
+      collegeId: collegeId
     }
   });
 };
 
-const findHostelByHostelNameAndCollegeId = async (hostelName, collegeId) => {
+const findHostelByHostelNameAndCollegeId = async (hostelName, collegeId, hostelId) => {
   return await prisma.hostel.findUnique({
     where: {
       collegeId_hostelName: {
         collegeId: collegeId,
         hostelName: hostelName
+      },
+      NOT: {
+        id: hostelId
       }
     }
   });

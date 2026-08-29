@@ -4,7 +4,7 @@ import { prisma } from "../src/configs/db.js";
 async function main() {
   
   const roles = [
-   "STUDENT","HOSTEL_ADMIN"
+   "STUDENT", "HOSTEL_ADMIN"
   ];
 
   for(const role of roles) {
@@ -85,6 +85,16 @@ async function main() {
     }
   });
 
+  const hostelAdminRole = await prisma.role.upsert({
+    where: {
+      roleName: "HOSTEL_ADMIN"
+    },
+    update: {},
+    create: {
+      roleName: "HOSTEL_ADMIN"
+    }
+  });
+
   const user = await prisma.user.upsert({
     where: {
       email: "sushvinth@gmail.com"
@@ -94,7 +104,8 @@ async function main() {
       email: "sushvinth@gmail.com",
       passwordHash: "$2a$12$7qtImmU60KkPBrvXRcsj2.FpAQXQTW92RZ/eROYzyPXcffDhUAKpa",
       status: "ACTIVE",
-      roleId: 2
+      roleId: hostelAdminRole.id,  //the above hostelAdminRole query is just for to use it here
+      collegeId: college.id
     }
   });
 
@@ -107,7 +118,8 @@ async function main() {
       hostelAdminName: "Sushvinth",
       contactNumber: "9898873443",
       userId: user.id,
-      hostelId: hostel.id
+      hostelId: hostel.id,
+      collegeId: college.id
     }
   });
 

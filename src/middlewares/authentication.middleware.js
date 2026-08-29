@@ -33,7 +33,8 @@ const authenticateUserMiddleware = async (req, res, next) => {
             }
           }
         }
-      }
+      },
+      studentProfile: true
     }
   });
 

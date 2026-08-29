@@ -1,34 +1,34 @@
 import createHttpError from "http-errors";
 import RoomsRepository from "./room.repository.js";
 
-const createRoom = async (loggedAdminHostelId, roomNumber, capacity) => {
+const createRoom = async (accessContext, roomNumber, capacity) => {
   // room number must be unique within that hostel, so checking it now
-  const existingRoomWithThisRoomNumber = await RoomsRepository.findRoomByRoomNumberWithinHostel(loggedAdminHostelId, roomNumber);
+  const existingRoomWithThisRoomNumber = await RoomsRepository.findRoomByRoomNumberWithinHostel(accessContext.loggedAdminHostelId, accessContext.loggedInAdminCollegeId, roomNumber);
   if (existingRoomWithThisRoomNumber) throw createHttpError(409, "Room number already exists in your hostel", { errors: "Invalid room number" });
 
-  const createdRoom = await RoomsRepository.createRoom(loggedAdminHostelId, roomNumber, capacity);
+  const createdRoom = await RoomsRepository.createRoom(accessContext.loggedAdminHostelId, roomNumber, capacity);
   return createdRoom;
 };
 
-const getRooms = async (loggedAdminHostelId) => {
+const getRooms = async (accessContext) => {
   //user (currently hostel admin) can see only his hostel room only
-  return await RoomsRepository.getRooms(loggedAdminHostelId);
+  return await RoomsRepository.getRooms(accessContext.loggedAdminHostelId, accessContext.loggedInAdminCollegeId);
 };
 
-const getOneRoom = async (roomId) => {
-  const room = await RoomsRepository.findRoomById(roomId);
+const getOneRoom = async (roomId, accessContext) => {
+  const room = await RoomsRepository.findRoomById(roomId, accessContext.loggedAdminHostelId, accessContext.loggedInAdminCollegeId);
   if (!room) throw createHttpError(404, "Room not found with id " + roomId, { errors: "Invalid room id" });
   return room;
 };
 
-const updateRoom = async (loggedAdminHostelId, roomId, updateRoomRequestBody) => {
-  //check room with passed id present or not
-  const room = await RoomsRepository.findRoomById(roomId);
+const updateRoom = async (accessContext, roomId, updateRoomRequestBody) => {
+  //check room with passed id present or not - also scope
+  const room = await RoomsRepository.findRoomById(roomId, accessContext.loggedAdminHostelId, accessContext.loggedInAdminCollegeId);
   if (!room) throw createHttpError(404, `Room with id ${roomId} not found`, { errors: "Invalid room id" });
 
   if (updateRoomRequestBody.roomNumber) {
     //check this passed room number (new room number) is unique within the hostel or not
-    const existingRoomWithThisRoomNumber = await RoomsRepository.findRoomByRoomNumberWithinHostel(loggedAdminHostelId, updateRoomRequestBody.roomNumber);
+    const existingRoomWithThisRoomNumber = await RoomsRepository.findRoomByRoomNumberWithinHostel(accessContext.loggedAdminHostelId, accessContext.loggedInAdminCollegeId, updateRoomRequestBody.roomNumber, roomId);
     if (existingRoomWithThisRoomNumber) throw createHttpError(409, `Room with this room number is already exists`, { errors: "Invalid room number" });
   }
 

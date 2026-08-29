@@ -37,11 +37,16 @@ model User {
   mustChangePassword Boolean        @default(false)
 
   roleId Int
+  collegeId Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   studentProfile     StudentProfile?    
   hostelAdminProfile HostelAdminProfile? 
 
-  role                            Role    @relation(fields: [roleId], references: [id])
+  role       Role    @relation(fields: [roleId], references: [id])
+  college    College @relation(fields: [collegeId], references: [id])
 }
 
 model College {
@@ -53,6 +58,9 @@ model College {
 
   hostels     Hostel[]
   departments Department[]
+  users User[]
+  students StudentProfile[]
+  hostelAdmins HostelAdminProfile[]
 }
 
 model Hostel {
@@ -66,9 +74,13 @@ model Hostel {
 
   collegeId Int
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   hostelAdmins HostelAdminProfile[]
   college      College              @relation(fields: [collegeId], references: [id])
   rooms        Room[]
+  students StudentProfile[]
 
   @@unique([collegeId, hostelName])
 }
@@ -95,6 +107,10 @@ model Room {
   capacity   Int
 
   hostelId        Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   hostel          Hostel           @relation(fields: [hostelId], references: [id])
   studentProfiles StudentProfile[]
 
@@ -110,11 +126,19 @@ model StudentProfile {
   userId       Int  @unique
   departmentId Int
   roomId       Int?
+  collegeId Int
+  hostelId Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id])
   department Department @relation(fields: [departmentId], references: [id])
   room       Room?      @relation(fields: [roomId], references: [id])
-  
+  college College @relation(fields: [collegeId], references: [id])
+  hostel Hostel @relation(fields: [hostelId], references: [id])
+  leaveApplications LeaveApplication[]
+
 }
 
 model HostelAdminProfile {
@@ -124,7 +148,37 @@ model HostelAdminProfile {
 
   userId   Int @unique
   hostelId Int
+  collegeId Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id])
   hostel Hostel @relation(fields: [hostelId], references: [id])
+  college College @relation(fields: [collegeId], references: [id])
+}
+
+enum LeaveApplicationStatusEnum {
+  WAITING_FOR_APPROVAL
+  APPROVED
+  REJECTED
+  CANCELLED //cancelled by student
+}
+
+model LeaveApplication {
+  id Int @id @default(autoincrement())
+  leaveReason String 
+  fromDate DateTime 
+  toDate DateTime
+  status LeaveApplicationStatusEnum @default(WAITING_FOR_APPROVAL)
+  rejectionReason String?
+
+  studentId Int 
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  reviewedAt DateTime?
+
+  student StudentProfile @relation(fields: [studentId], references: [id])
 }
