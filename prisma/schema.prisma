@@ -122,6 +122,7 @@ model StudentProfile {
   studentName        String
   contactNumber      String @unique
   parentMobileNumber String
+  studentImageUrl    String?
 
   userId       Int  @unique
   departmentId Int
@@ -138,6 +139,7 @@ model StudentProfile {
   college College @relation(fields: [collegeId], references: [id])
   hostel Hostel @relation(fields: [hostelId], references: [id])
   leaveApplications LeaveApplication[]
+  attendanceRecords AttendanceRecord[]
 
 }
 
@@ -181,4 +183,22 @@ model LeaveApplication {
   reviewedAt DateTime?
 
   student StudentProfile @relation(fields: [studentId], references: [id])
+}
+
+model AttendanceRecord {
+  id                    Int         @id @default(autoincrement())
+  attendanceDate        DateTime  
+  reportedTime          DateTime    @default(now())
+  capturedImageUrl      String
+  matchingPercentage    Float     
+  latitude              Float
+  longitude             Float
+  isLocatedWithinHostel Boolean  @default(false)
+  locationDeviation     Float?
+  
+  studentId Int
+
+  student StudentProfile @relation(fields: [studentId], references: [id])
+
+  @@unique([studentId, attendanceDate])
 }

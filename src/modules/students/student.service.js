@@ -10,6 +10,7 @@ const createStudent = async (studentRequestBody, accessContext) => {
     contactNumber,
     parentMobileNumber,
     departmentId,
+    studentImageUrl,
     roomId
   } = studentRequestBody;
 
@@ -59,7 +60,7 @@ const createStudent = async (studentRequestBody, accessContext) => {
     const createdUser = await StudentRepository.createUser(tx, email, tempPassword, studentRole.id, accessContext.loggedInAdminCollegeId);
 
     //user created now studentprofile has to be created
-    const createdStudentProfile = await StudentRepository.createStudentProfile(tx, studentName, contactNumber, parentMobileNumber, createdUser.id, departmentId, roomId, accessContext.loggedInAdminCollegeId, accessContext.loggedInAdminHostelId);
+    const createdStudentProfile = await StudentRepository.createStudentProfile(tx, studentName, contactNumber, parentMobileNumber, createdUser.id, departmentId, roomId, studentImageUrl, accessContext.loggedInAdminCollegeId, accessContext.loggedInAdminHostelId);
 
     return {
       createdUser,
@@ -86,6 +87,7 @@ const updateStudentProfile = async (id, updateStudentProfileRequestBody, accessC
     contactNumber,
     parentMobileNumber,
     departmentId,
+    studentImageUrl,
     roomId
   } = updateStudentProfileRequestBody;
 
@@ -142,7 +144,7 @@ const updateStudentProfile = async (id, updateStudentProfileRequestBody, accessC
     }
 
     //ALL validations are passed so update student profile
-    const updatedStudentProfile = await StudentRepository.updateStudentProfile(tx, studentProfile.id, studentName, contactNumber, parentMobileNumber, departmentId, roomId);
+    const updatedStudentProfile = await StudentRepository.updateStudentProfile(tx, studentProfile.id, studentName, contactNumber, parentMobileNumber, departmentId, roomId, studentImageUrl);
 
 
     return updatedStudentProfile;

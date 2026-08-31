@@ -8,6 +8,9 @@ import studentRouter from "./modules/students/student.routes.js";
 import hostelRouter from "./modules/hostels/hostel.routes.js";
 import roomsRouter from "./modules/rooms/room.routes.js";
 import leaveApplicationRouter from "./modules/leave-applications/leave-appln.routes.js";
+import uploadRouter from "./modules/upload/upload.routes.js";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const app = express();
 
@@ -26,6 +29,13 @@ app.use(`${prefix_api}/hostels`, hostelRouter);
 app.use(`${prefix_api}/rooms`, roomsRouter);
 
 app.use(`${prefix_api}/leave_applications`, leaveApplicationRouter);
+
+app.use(`${prefix_api}/upload`, uploadRouter);
+
+const __fileName = fileURLToPath(import.meta.url);
+const __dirName = path.dirname(__fileName);
+
+app.use("/uploaded-files", express.static(path.join(__dirName, "../uploaded-files")));
 
 app.use(gloabalErrorHandlerMiddleware);
 

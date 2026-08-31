@@ -74,7 +74,7 @@ const createUser = async (tx, email, passwordHash, roleId, collegeId) => {
   });
 };
 
-const createStudentProfile = async (tx, studentName, contactNumber, parentMobileNumber, userId, departmentId, roomId, collegeId, hostelId) => {
+const createStudentProfile = async (tx, studentName, contactNumber, parentMobileNumber, userId, departmentId, roomId, studentImageUrl, collegeId, hostelId) => {
   return await tx.studentProfile.create({
     data: {
       studentName: studentName,
@@ -82,6 +82,7 @@ const createStudentProfile = async (tx, studentName, contactNumber, parentMobile
       parentMobileNumber: parentMobileNumber,
       userId: userId,
       departmentId: departmentId,
+      studentImageUrl: studentImageUrl ?? null,
       roomId: roomId ?? null,
       collegeId: collegeId,
       hostelId: hostelId
@@ -150,7 +151,8 @@ const updateStudentProfile = async (tx, id, studentName, contactNumber, parentMo
       contactNumber: contactNumber ?? undefined,
       parentMobileNumber: parentMobileNumber ?? undefined,
       departmentId: departmentId ?? undefined,
-      roomId: roomId ?? undefined
+      studentImageUrl: studentImageUrl ?? undefined,
+      roomId: roomId ?? undefined,
     }
   });
 };
