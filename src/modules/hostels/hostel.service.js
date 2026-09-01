@@ -1,5 +1,6 @@
 import createHttpError from "http-errors";
 import HostelRepository from "./hostel.repository.js";
+import { isValidTimeString } from "../../utils/helper-functions.utils.js";
 
 const updateHostel = async (hostelId, updateHostelRequestBody, accessContext) => {
   //logged in admin's hostel id should match with passed hostel id, then only we can assure that user(hostel admin) is updating their hostel only
@@ -15,7 +16,10 @@ const updateHostel = async (hostelId, updateHostelRequestBody, accessContext) =>
     latitude,
     longitude,
     contactPersonName,
-    contactNumber
+    contactNumber,
+    attendanceMarkingStartTime,
+    attendanceMarkingEndTime,
+    attendanceRadius
   } = updateHostelRequestBody;
 
 
@@ -31,8 +35,19 @@ const updateHostel = async (hostelId, updateHostelRequestBody, accessContext) =>
   // same with longitude - longitude lies in green witch so no need to worry for india
   if ((latitude && !longitude) || (!latitude && longitude)) throw createHttpError(409, "Both latitude and longitude must be present", { errors: "Both(latitude and longitude) required" });
 
+  if(attendanceMarkingStartTime && !isValidTimeString(attendanceMarkingStartTime)) {
+    throw createHttpError(409, "Invalid start time format in payload", {errors: "Invalid time format"});
+  }
 
-  const updatedHostel = await HostelRepository.updateHostel(hostelId, hostelName, location, latitude, longitude, contactPersonName, contactNumber);
+  if(attendanceMarkingEndTime && !isValidTimeString(attendanceMarkingEndTime)) {
+    throw createHttpError(409,"Invalid end time format in payload", {errors: "Invalid time format"});
+  }
+  
+  if(attendanceRadius && (attendanceRadius <= 10 || attendanceRadius >= 10000)) {
+    throw createHttpError(409, "Invalid attendance radius, attendance radius can be between 10m to 10km", {errors: "Invalid attendance radius"});
+  }
+
+  const updatedHostel = await HostelRepository.updateHostel(hostelId, hostelName, location, latitude, longitude, contactPersonName, contactNumber, attendanceMarkingStartTime, attendanceMarkingEndTime, attendanceRadius);
   return updatedHostel;
 };
 

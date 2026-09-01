@@ -8,3 +8,8 @@ export const getAccessContext = (req) => {
     loggedInStudentProfileId: req.user?.studentProfile?.id ?? null
   };
 };
+
+export const isValidTimeString = (timeString) => {
+  const timeRegx = /^([01]\d|2[0-3]):([0-5]\d)$/;
+  return timeRegx.test(timeString);
+};

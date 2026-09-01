@@ -47,7 +47,10 @@ async function main() {
       longitude: 78.689962,
       contactPersonName: "Rev.Fr. Paul raj",
       contactNumber: "8876873479",
-
+      attendanceMarkingStartTime: "20:30",
+      attendanceMarkingEndTime: "22:00",
+      attendanceRadius: 800,
+      
       collegeId: college.id
     }
   });

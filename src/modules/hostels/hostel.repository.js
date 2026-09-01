@@ -23,7 +23,7 @@ const findHostelByHostelNameAndCollegeId = async (hostelName, collegeId, hostelI
   });
 };
 
-const updateHostel = async (hostelId, hostelName, location, latitude, longitude, contactPersonName, contactNumber) => {
+const updateHostel = async (hostelId, hostelName, location, latitude, longitude, contactPersonName, contactNumber, attendanceMarkingStartTime, attendanceMarkingEndTime, attendanceRadius) => {
   return await prisma.hostel.update({
     where: {
       id: hostelId
@@ -34,7 +34,10 @@ const updateHostel = async (hostelId, hostelName, location, latitude, longitude,
       latitude: latitude ?? undefined,
       longitude: longitude ?? undefined,
       contactPersonName: contactPersonName ?? undefined,
-      contactNumber: contactNumber ?? undefined
+      contactNumber: contactNumber ?? undefined,
+      attendanceMarkingStartTime: attendanceMarkingStartTime ?? undefined,
+      attendanceMarkingEndTime: attendanceMarkingEndTime ?? undefined,
+      attendanceRadius: attendanceRadius ?? undefined
     }
   });
 };  

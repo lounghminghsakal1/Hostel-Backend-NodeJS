@@ -71,6 +71,9 @@ model Hostel {
   longitude         Float
   contactPersonName String
   contactNumber     String
+  attendanceMarkingStartTime String? @default("20:30")
+  attendanceMarkingEndTime   String? @default("22:00")
+  attendanceRadius  Float    @default(800) 
 
   collegeId Int
 
@@ -187,14 +190,14 @@ model LeaveApplication {
 
 model AttendanceRecord {
   id                    Int         @id @default(autoincrement())
-  attendanceDate        DateTime  
+  attendanceDate        DateTime    @db.Date
   reportedTime          DateTime    @default(now())
   capturedImageUrl      String
-  matchingPercentage    Float     
+  faceMatchingPercentage    Float     
   latitude              Float
   longitude             Float
-  isLocatedWithinHostel Boolean  @default(false)
-  locationDeviation     Float?
+  isLocatedWithinHostelRadius Boolean  @default(false)
+  locationDeviationFromhostel     Float?
   
   studentId Int
 
