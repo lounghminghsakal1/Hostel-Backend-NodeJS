@@ -3,8 +3,8 @@ import { z } from "zod";
 export const updateHostelRequestSchema = z.object({
   hostelName: z.string().optional(),
   location: z.string().optional(),
-  latitude: z.float64().optional().min(-90).max(90),
-  longitude: z.float64().optional().min(-180).max(180),
+  latitude: z.float64().min(-90).max(90).optional(),
+  longitude: z.float64().min(-180).max(180).optional(),
   contactPersonName: z.string().optional(),
   contactNumber: z.string().optional(),
 

@@ -1,6 +1,6 @@
 import express from "express";
 import authenticateUserMiddleware from "../../middlewares/authentication.middleware.js";
-import authorizeUserMiddleware from "../../middlewares/authorization.middleware";
+import authorizeUserMiddleware from "../../middlewares/authorization.middleware.js";
 import validateRequestMiddleware from "../../middlewares/validate-request.middleware.js";
 import { createAttendanceRecord } from "./attndr.request-schema.js";
 import AttendanceRecordController from "./attndr.controller.js";
