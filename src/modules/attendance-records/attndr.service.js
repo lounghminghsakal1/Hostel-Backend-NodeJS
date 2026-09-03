@@ -20,7 +20,8 @@ const markAttendance = async (accessContext, markAttendanceRequestBody) => {
     hourCycle: "h23"
   }).format(new Date());
 
-  const currentDate = new Intl.DateTimeFormat("en-GB", {
+  //en-CA format is -> yyyy-mm-dd so that it can be useful in filtering and other db related stuffs
+  const currentDate = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Asia/Kolkata",
     year: "numeric",
     month: "2-digit",
@@ -63,8 +64,8 @@ const calculateDistanceFromHostelInMeteres = (latitude, longitude, hostel) => {
 
   
   //difference between latitudes and longitudes
-  const deltaLat = toRadians(hostelLatitude -  capturedLatitude);
-  const deltaLong = toRadians(hostelLongitude - capturedLongitude);
+  const deltaLat = hostelLatitude -  capturedLatitude;
+  const deltaLong = hostelLongitude - capturedLongitude;
 
   // FORMULA -> distance between 2 coordinates , we can't use distance btw 2 points because earth is not flat
   // Haversine formula -> Distance = 2 * R * arcsin(Math.sqrt(sin^2(deltaLat/2) + cos(lat1) cos(lat2) sin^2(deltaLong/2)))
@@ -72,7 +73,7 @@ const calculateDistanceFromHostelInMeteres = (latitude, longitude, hostel) => {
 
   const a = Math.sin(deltaLat / 2) ** 2 +
               Math.cos(capturedLatitude) *
-              Math.cos(latitude) *
+              Math.cos(hostelLatitude) *
               Math.sin(deltaLong / 2) ** 2 ;
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
@@ -80,9 +81,36 @@ const calculateDistanceFromHostelInMeteres = (latitude, longitude, hostel) => {
   return EARTH_RADIUS_IN_METERES * c;
 };
 
-const AttendanceService = {
-  markAttendance,
+const getAttendanceRecords = async (accessContext, attendanceQuery) => {
+  const {
+    date, 
+    fromDate,
+    toDate,
+    status,
+    page, 
+    pageSize
+  } = attendanceQuery;
+
+  if(date && (fromDate || toDate)) throw createHttpError(422, "Both date and range dates(from date and to date) cannot present at the same time", {errors: "Invalid query params"});
+  //here for attendance marked students -> i need to show them in a table in UI
+  // the UI table columns are -> student_name, rollNumber, roomNumber, capturedImage, faceMatchingPercentage, locationdeviationFromHostel, location_coordinates_link(navigates to map), 
+  //and for absent (who has no records during the particular date or during date range (if atleast one absent during those days))
+  //in that case UI table columns are -> student_name, rollNumber, roomNumber, department, absentdates(popup if its more than certain number of dates)
+
+  //so i need just total students count, attendance marked students count, absent count as normal data and the main data is above columns based on status 
+
+  //constructing where 
+  const where = {};
+  if(date) where.date = date;
+  //getting summary - total students count, attendance marked students count, absent count
+
+  //getting present students
 
 };
 
-export default AttendanceService;
+const AttendanceRecordService = {
+  markAttendance,
+  getAttendanceRecords,
+};
+
+export default AttendanceRecordService;

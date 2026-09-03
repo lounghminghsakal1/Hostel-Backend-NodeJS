@@ -16,9 +16,19 @@ const failureResponse = (res, message, errors, statusCode = 500) => {
   });
 };
 
+export const paginatedResponse = (res, message, data, meta, statusCode = 200) => {
+  return res.status(statusCode).json({
+    status: "success",
+    message,
+    data,
+    meta
+  });
+};
+
 const Responses = {
   successResponse,
-  failureResponse
+  failureResponse,
+  paginatedResponse
 }; 
 
 export default Responses;

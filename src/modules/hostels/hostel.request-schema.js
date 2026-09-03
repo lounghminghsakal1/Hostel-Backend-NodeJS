@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const updateHostelRequestSchema = z.object({
+export const updateHostelRequestBodySchema = z.object({
   hostelName: z.string().optional(),
   location: z.string().optional(),
   latitude: z.float64().min(-90).max(90).optional(),

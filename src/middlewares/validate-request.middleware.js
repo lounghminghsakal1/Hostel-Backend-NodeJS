@@ -1,15 +1,37 @@
 import createHttpError from "http-errors";
+import { ZodError } from "zod";
 
-const validateRequestMiddleware = (schema) => {
+
+//next() simply means -> continue with next request handler in the chain,
+//next(err) means -> express will infer it as -> next with 1 argument so it must be a error so skip all middlewares/request handlers just proceed to error handler 
+// how express finds error handler ?? -> the one with 4 params , (err, req, res, next) => {}
+
+//schemas is an object containing body, query, params like this {body: {}, query: {}, params: {}}
+const validateRequestMiddleware = (schemas) => {
   return (req, res, next) => {
-    const result = schema.safeParse(req.body);
-    if(!result.success) {
-      throw new createHttpError(422, "Invalid request payload", {
-        errors: formatZodErrors(result.error.issues)
-      });
+    try {
+      if (schemas.body && req.body) {
+        req.body = schemas.body.parse(req.body); // safeParse returns an object like this -> {success: true, data: {}, issues: {} }
+      }
+      if (schemas.query && req.query) {
+        req.query = schemas.query.parse(req.query); // parse returns data explicitly
+      }
+      if (schemas.parmas && req.params) {
+        req.params = schemas.params.parse(req.params);
+      }
+      next();
+    } catch (err) {
+      if (err instanceof ZodError) {
+        next(createHttpError(422, "Invalid request", {
+          errors: formatZodErrors(err.issues)
+        })); 
+        //we can do throw also here because express 5 will catch thrown errors and pass it to next error handler 
+        // throw new createHttpError(422, "Invalid request", {errors: err.flatten().fieldErrors});
+      } else {
+        next(err);
+      }
     }
-    req.body = result.data;
-    next();
+
   };
 };
 

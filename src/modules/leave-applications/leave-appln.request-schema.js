@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const createLeaveApplicationRequestSchema = z.object({
+export const createLeaveApplicationRequestBodySchema = z.object({
   leaveReason: z.string(),
   fromDate: z.coerce.date({
     invalid_type_error: "Invalid date format"
@@ -12,7 +12,7 @@ export const createLeaveApplicationRequestSchema = z.object({
   message: "fromDate must be equal or before to toDate",
 });
 
-export const updateLeaveApplicationRequestSchema = z.object({
+export const updateLeaveApplicationRequestBodySchema = z.object({
   leaveReason: z.string().optional(),
   fromDate: z.coerce.date({
     invalid_type_error: "Invalid date format"
@@ -22,7 +22,7 @@ export const updateLeaveApplicationRequestSchema = z.object({
   }).optional()
 });
 
-export const reviewLeaveApplicationRequestSchema = z.object({
+export const reviewLeaveApplicationRequestBodySchema = z.object({
   status: z.enum(["APPROVED", "REJECTED"]),
   rejectionReason: z.string().optional()
 });
