@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { paginationQuerySchama } from "../../utils/pagination.utils";
+import { paginationQuerySchema } from "../../utils/pagination.utils.js";
 
 export const createAttendanceRecordRequestBodySchema = z.object({
   capturedImageUrl: z.url(),
@@ -7,7 +7,7 @@ export const createAttendanceRecordRequestBodySchema = z.object({
   longitude: z.float64().min(-180).max(180)
 });
 
-export const getAllAttendanceRecordRequestQuerySchema = paginationQuerySchama.extend({
+export const getAllAttendanceRecordRequestQuerySchema = paginationQuerySchema.extend({
   date: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/).optional(),
   fromDate: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/).optional(),
   toDate: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/).optional(),

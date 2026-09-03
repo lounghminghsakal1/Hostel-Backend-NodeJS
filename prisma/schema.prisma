@@ -200,7 +200,7 @@ model AttendanceRecord {
   locationDeviationFromhostel     Float?
   
   studentId Int
-
+      
   student StudentProfile @relation(fields: [studentId], references: [id])
 
   @@unique([studentId, attendanceDate])

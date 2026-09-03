@@ -22,9 +22,32 @@ const markAttendance = async (currentDate, capturedImageUrl, faceMatchingPercent
   });
 };
 
+const getAllMarkedAttendanceRecords = async (where) => {
+  return await prisma.attendanceRecord.findMany({
+    where: where,
+  });
+};
+
+const getTotalStudentsCount = async (hostelId) => {
+  return await prisma.studentProfile.count({
+    where: {
+      hostelId: hostelId
+    }
+  });
+};
+
+const getAttendanceMarkedStudentsCount = async (where) => {
+  return await prisma.attendanceRecord.count({
+    where: where
+  });
+};
+
 const AttendanceRecordRepository = {
   findHostelById,
-  markAttendance
+  markAttendance,
+  getAllMarkedAttendanceRecords,
+  getTotalStudentsCount,
+  getAttendanceMarkedStudentsCount,
 };
 
 export default AttendanceRecordRepository;

@@ -178,7 +178,7 @@ const updateStatusOfStudent = async (userId, status) => {
 };
 
 const updateRoomOfThestudent = async (studentId, roomId) => {
-  return prisma.studentProfile.update({
+  return await prisma.studentProfile.update({
     where: {
       id: studentId 
     },
