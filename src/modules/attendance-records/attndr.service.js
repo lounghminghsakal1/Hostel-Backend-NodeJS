@@ -101,22 +101,21 @@ const getAttendanceRecords = async (accessContext, attendanceQuery) => {
   //in that case UI table columns are -> student_name, rollNumber, roomNumber, department, absentdates(popup if its more than certain number of dates)
 
   //so i need just total students count, attendance marked students count, absent count as normal data and the main data is above columns based on status 
-
   //constructing where 
   let where = {};
-  if (date) where.date = date;
-  if (fromDate && toDate) {
-    where.fromDate = fromDate;
-    where.toDate = toDate;
-  }
-  if (status) where.status = status;
-  where = { ...where, ...toPrismaPagination(page, pageSize) };
+  where.attendanceDate = date ?? new Date();
+  // if (fromDate && toDate) {
+  //   where.fromDate = fromDate;
+  //   where.toDate = toDate;
+  // }
+  // if (status) where.status = status;
+  const paginationQuery = toPrismaPagination(page, pageSize);
 
   //adding scope access to where 
-  where = { ...where, studentProfile: { hostelId: accessContext.loggedInAdminHostelId } };
+  where = { ...where, student: { hostelId: accessContext.loggedInAdminHostelId } };
   //getting summary - total students count, attendance marked students count, absent count
   const totalStudentProfiles = await AttendanceRecordRepository.getTotalStudentsCount(accessContext.loggedInAdminHostelId);
-  const attendanceMarkedStudentsCount = await AttendanceRecordRepository.getAttendanceMarkedStudentsCount(where);
+  const attendanceMarkedStudentsCount = await AttendanceRecordRepository.getAttendanceMarkedStudentsCount(where, paginationQuery);
   const absentsStudentsCount = totalStudentProfiles - attendanceMarkedStudentsCount;
 
   let studentsAttendanceRecords;

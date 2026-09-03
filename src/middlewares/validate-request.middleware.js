@@ -14,10 +14,11 @@ const validateRequestMiddleware = (schemas) => {
         req.body = schemas.body.parse(req.body); // safeParse returns an object like this -> {success: true, data: {}, issues: {} }
       }
       if (schemas.query && req.query) {
-        req.query = schemas.query.parse(req.query); // parse returns data explicitly
+         // req.query is a read-only getter in Express 5; store parsed values separately.
+         attachValidatedQueryToReq(req, schemas.query.parse(req.query));
       }
-      if (schemas.parmas && req.params) {
-        req.params = schemas.params.parse(req.params);
+      if (schemas.params && req.params) {
+        req.params = schemas.params.parse(req.params); // parse returns data explicitly
       }
       next();
     } catch (err) {
@@ -34,6 +35,10 @@ const validateRequestMiddleware = (schemas) => {
 
   };
 };
+
+const attachValidatedQueryToReq = (req, value) => {
+  Object.defineProperty(req, "validatedQuery", { value, writable: true, configurable: true});
+}
 
 const formatZodErrors = (zodErrors) => {
   return zodErrors.reduce((formattedErrorObject, error) => {

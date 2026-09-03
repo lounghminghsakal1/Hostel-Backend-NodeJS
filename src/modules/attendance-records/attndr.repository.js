@@ -36,9 +36,11 @@ const getTotalStudentsCount = async (hostelId) => {
   });
 };
 
-const getAttendanceMarkedStudentsCount = async (where) => {
+const getAttendanceMarkedStudentsCount = async (where, paginationQuery) => {
   return await prisma.attendanceRecord.count({
-    where: where
+    where: where,
+    skip: paginationQuery.skip,
+    take: paginationQuery.take
   });
 };
 
