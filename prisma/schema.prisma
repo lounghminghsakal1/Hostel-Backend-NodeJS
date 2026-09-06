@@ -126,6 +126,7 @@ model StudentProfile {
   contactNumber      String @unique
   parentMobileNumber String
   studentImageUrl    String?
+  rollNumber         String?
 
   userId       Int  @unique
   departmentId Int

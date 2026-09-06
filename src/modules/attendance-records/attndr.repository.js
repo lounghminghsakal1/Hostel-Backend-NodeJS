@@ -22,9 +22,11 @@ const markAttendance = async (currentDate, capturedImageUrl, faceMatchingPercent
   });
 };
 
-const getAllMarkedAttendanceRecords = async (where) => {
+const getAllMarkedAttendanceRecords = async (where, skip, take) => {
   return await prisma.attendanceRecord.findMany({
     where: where,
+    skip,
+    take
   });
 };
 
@@ -36,12 +38,59 @@ const getTotalStudentsCount = async (hostelId) => {
   });
 };
 
-const getAttendanceMarkedStudentsCount = async (where, paginationQuery) => {
+const getDistinctAttendanceMarketStudentsCount = async (where) => {
   return await prisma.attendanceRecord.count({
-    where: where,
-    skip: paginationQuery.skip,
-    take: paginationQuery.take
+    where: where
   });
+};
+
+const getStudentsWithAbsenses = async (hostelId, startDate, endDate, expectedDatesStrings, totalExpectedDays, skip, take) => {
+  //get all students
+  const students = await prisma.studentProfile.findMany({
+    where: {
+      hostelId
+    },
+    include: {
+      attendanceRecords: {
+        where: {
+          attendanceDate: {
+            gte: startDate,
+            lt: endDate
+          }
+        },
+        select: {
+          attendanceDate: true
+        }
+      },
+      department: {
+        select: departmentName
+      },
+      room: {
+        select: roomNumber
+      }
+
+    }
+  });
+
+  let absentStudents;
+  for(const student of students) {
+    const presentDates = new Set(student.attendanceRecords.map(r => r.attendanceDate.toISOString().split("T")[0]));
+    const absentDates = expectedDatesStrings.filter(eD => !presentDates.has(eD));
+    if(absentDates.length > 0) {
+      absentStudents.push({
+        studentName: student.studentName,
+        rollNumber: student.rollNumber,
+        department: student.department.departmentName,
+        roomNumber: student.room.roomNumber,
+        absentDates
+      });
+    }
+  }
+
+  return {
+    totalCount: absentStudents.length,
+    records: absentStudents
+  };
 };
 
 const AttendanceRecordRepository = {
@@ -49,7 +98,8 @@ const AttendanceRecordRepository = {
   markAttendance,
   getAllMarkedAttendanceRecords,
   getTotalStudentsCount,
-  getAttendanceMarkedStudentsCount,
+  getDistinctAttendanceMarketStudentsCount,
+  getStudentsWithAbsenses
 };
 
 export default AttendanceRecordRepository;

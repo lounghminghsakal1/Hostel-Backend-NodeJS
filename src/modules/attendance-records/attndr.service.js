@@ -1,6 +1,7 @@
 import createHttpError from "http-errors";
 import AttendanceRecordRepository from "./attndr.repository.js";
-import { buildMeta, toPrismaPagination } from "../../utils/pagination.utils.js";
+import { buildMeta, paginationQuerySchema, toPrismaPagination } from "../../utils/pagination.utils.js";
+import { currentDate, currentTime, getDateRange, getDatesListBetween } from "../../utils/dates.utils.js";
 
 const markAttendance = async (accessContext, markAttendanceRequestBody) => {
   const {
@@ -13,34 +14,12 @@ const markAttendance = async (accessContext, markAttendanceRequestBody) => {
   const hostel = await AttendanceRecordRepository.findHostelById(accessContext.loggedInStudentHostelId);
   if (!hostel) throw createHttpError(404, `Hostel with hostel id ${accessContext.loggedInStudentHostelId} not found`, { errors: "Invalid request" });
 
-  //"en-GB" is for formatting , here en-GB is refering british format because they represent time in 24 hour format and dd/mm/yyyy format
-  const currentTime = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Asia/Kolkata",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23"
-  }).format(new Date());
-
-  //en-CA format is -> yyyy-mm-dd so that it can be useful in filtering and other db related stuffs
-  const currentDate = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Kolkata",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit"
-  }).format(new Date());
-
-
   if (currentTime < hostel.attendanceMarkingStartTime) throw createHttpError(422, `Attendance marking time hasn't come yet, wait until ${hostel.attendanceMarkingStartTime}`, { errors: "Invalid request (start time haven't arrived yet)" });
   if (currentTime > hostel.attendanceMarkingEndTime) throw createHttpError(422, `Attendance marking end time (${hostel.attendanceMarkingEndTime}) has already passed`, { errors: "Invalid request (end time passed)" });
 
-  let isLocatedWithinHostelRadius;
   //latitude and longitude processing
-  const locationDeviationFromHostel = calculateLocationFromHostel(latitude, longitude, hostel);
-  if (locationDeviationFromHostel > hostel.attendanceRadius) {
-    isLocatedWithinHostelRadius = false;
-  } else {
-    isLocatedWithinHostelRadius = true;
-  }
+  const locationDeviationFromHostel = calculateDistanceFromHostelInMeters(latitude, longitude, hostel);
+  const isLocatedWithinHostelRadius = locationDeviationFromHostel <= hostel.attendanceRadius;
 
   let faceMatchingPercentage = 90;
   //Image processing ()
@@ -53,8 +32,8 @@ const markAttendance = async (accessContext, markAttendanceRequestBody) => {
   return createdAttendanceRecord;
 };
 
-const calculateDistanceFromHostelInMeteres = (latitude, longitude, hostel) => {
-  const EARTH_RADIUS_IN_METERES = 6371000;
+const calculateDistanceFromHostelInMeters = (latitude, longitude, hostel) => {
+  const EARTH_RADIUS_IN_METERS = 6371000;
   const toRadians = (degree) => degree * (Math.PI / 180);
 
   const capturedLatitude = toRadians(latitude);
@@ -79,68 +58,100 @@ const calculateDistanceFromHostelInMeteres = (latitude, longitude, hostel) => {
 
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-  return EARTH_RADIUS_IN_METERES * c;
+  return EARTH_RADIUS_IN_METERS * c;
 };
 
 const getAttendanceRecords = async (accessContext, attendanceQuery) => {
-  const {
-    date,
-    fromDate,
-    toDate,
-    status,
-    page,
-    pageSize
-  } = attendanceQuery;
-
-  if (date && (fromDate || toDate)) throw createHttpError(422, "Both date and range dates(from date and to date) cannot present at the same time", { errors: "Invalid query params" });
-
-  if ((fromDate && !toDate) || (!fromDate && toDate)) throw createHttpError(422, "For date range filters, both fromDate and toDate are required");
   //here for attendance marked students -> i need to show them in a table in UI
   // the UI table columns are -> student_name, rollNumber, roomNumber, capturedImage, faceMatchingPercentage, locationdeviationFromHostel, location_coordinates_link(navigates to map), 
   //and for absent (who has no records during the particular date or during date range (if atleast one absent during those days))
   //in that case UI table columns are -> student_name, rollNumber, roomNumber, department, absentdates(popup if its more than certain number of dates)
 
   //so i need just total students count, attendance marked students count, absent count as normal data and the main data is above columns based on status 
-  //constructing where 
-  let where = {};
-  where.attendanceDate = date ?? new Date();
-  // if (fromDate && toDate) {
-  //   where.fromDate = fromDate;
-  //   where.toDate = toDate;
-  // }
-  // if (status) where.status = status;
-  const paginationQuery = toPrismaPagination(page, pageSize);
 
-  //adding scope access to where 
-  where = { ...where, student: { hostelId: accessContext.loggedInAdminHostelId } };
-  //getting summary - total students count, attendance marked students count, absent count
-  const totalStudentProfiles = await AttendanceRecordRepository.getTotalStudentsCount(accessContext.loggedInAdminHostelId);
-  const attendanceMarkedStudentsCount = await AttendanceRecordRepository.getAttendanceMarkedStudentsCount(where, paginationQuery);
-  const absentsStudentsCount = totalStudentProfiles - attendanceMarkedStudentsCount;
+  //queries
+  const {
+    date,
+    fromDate,
+    toDate,
+    status = "present",
+    page,
+    pageSize
+  } = attendanceQuery;
 
-  let studentsAttendanceRecords;
-  if (status === "absent") {
-    //getting absent students data
-    studentsAttendanceRecords = null; // later
+  //query validations
+  //1. date filter and range date filter cannot exist simultaneously
+  if (date && (fromDate || toDate)) throw createHttpError(422, "Both date and range dates(from and to date) filters can't be present at the same time in query", { errors: "invalid query" });
+  //2.from date and todate both must be present if opt for range filter(only one is provided like either fromdate or todate so it should not be like that)
+  if ((fromDate || toDate) && ((fromDate && !toDate) || (!fromDate || toDate))) throw createHttpError(422, "Both from date and to date must be present for range date filters", { errors: "Invalid query" });
+  //3.fromdate must be past to todate
+  if ((fromDate && toDate) && new Date(fromDate) > new Date(toDate)) throw createHttpError(422, "From date should be past to to date", { errors: "Invalid query" });
+
+  //constructing date of where query
+  let attendanceWhere;
+  let startDate, endDate, rawStartDate, rawEndDate;
+
+  if (date) {
+    rawStartDate = date;
+    rawEndDate = date;
+    ({ startDate, endDate } = getDateRange(date, date));
+  } else if (fromDate && toDate) {
+    rawStartDate = fromDate;
+    rawEndDate = endDate;
+    ({ startDate, endDate } = getDateRange(fromDate, toDate));
   } else {
-    //getting present students
-    studentsAttendanceRecords = await AttendanceRecordRepository.getAllMarkedAttendanceRecords(where);
+    rawStartDate = currentDate;
+    rawEndDate = currentDate;
+    ({ startDate, endDate } = getDateRange(currentDate));
   }
-  //constructing data
-  const attendanceRecords = {
-    summary: {
-      totalStudentProfiles,
-      attendanceMarkedStudentsCount,
-      absentsStudentsCount
+
+  //Expected dates as array of strings
+  const expectedDatesStrings = getDatesListBetween(rawStartDate, rawEndDate);
+  const totalExpectedDays = expectedDatesStrings.length;
+  const hostelId = accessContext.loggedInAdminHostelId;
+
+  attendanceWhere = {
+    attendanceDate: {
+      gte: startDate,
+      lt: endDate
     },
-    studentsAttendanceRecords,
+    student: {
+      hostelId: hostelId
+    }
   };
-  //pagination meta data 
-  const paginationMeta = buildMeta(page, pageSize, studentsAttendanceRecords.length);
+  //pagination query 
+  const prismaPaginationQuery = toPrismaPagination(page, pageSize);
+
+  //based on status , query records
+  let records;
+  let totalRecordsForPagination;
+  if (status === "absent") {
+    // here i need expected attendance records count so based on that only i can query because our requirement is for a range date query for example -> from sept 10 to sept 14 the students who absent for atleast 1 day should be included in this record
+    ({totalRecordsForPagination, records} = await AttendanceRecordRepository.getStudentsWithAbsenses(hostelId, startDate, endDate, expectedDatesStrings, totalExpectedDays, prismaPaginationQuery.skip, prismaPaginationQuery.take));
+  } else {
+    records = await AttendanceRecordRepository.getAllMarkedAttendanceRecords(attendanceWhere, prismaPaginationQuery.skip, prismaPaginationQuery.take);
+  }
+
+
+  //get summary data
+  const totalStudentsCount = await AttendanceRecordRepository.getTotalStudentsCount(hostelId);
+  const distinctAttendanceStudentsCount = await AttendanceRecordRepository.getDistinctAttendanceMarketStudentsCount(attendanceWhere, hostelId);
+  const completelyAbsentStudentsCount = totalStudentsCount - distinctAttendanceStudentsCount;
+
+
+  //getPaginationMeta
+  const paginationMeta = buildMeta(page, pageSize, records.length);
 
   return {
-    attendanceRecords,
-    paginationMeta
+    records: {
+      records,
+      summary: {
+        totalStudentsCount,
+        distinctAttendanceStudentsCount,
+        completelyAbsentStudentsCount
+      }
+    },
+    paginationMeta: paginationMeta
   };
 };
 

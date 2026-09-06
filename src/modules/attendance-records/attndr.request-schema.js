@@ -8,10 +8,10 @@ export const createAttendanceRecordRequestBodySchema = z.object({
 });
 
 export const getAllAttendanceRecordRequestQuerySchema = paginationQuerySchema.extend({
-  date: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/).optional(),
-  fromDate: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/).optional(),
-  toDate: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/).optional(),
+  date: z.iso.date().optional(),
+  fromDate: z.iso.date().optional(),
+  toDate: z.iso.date().optional(),
   status: z.enum(["present", "absent"]).optional().default("present"),
 });
 
-
+const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;

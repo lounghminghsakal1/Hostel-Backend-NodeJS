@@ -10,8 +10,8 @@ const markAttendance = async (req, res) => {
 
 const getAttendanceRecords = async (req, res) => {
   const accessContext = getAccessContext(req);
-  const { attendanceRecords, paginationMeta } = await AttendanceRecordService.getAttendanceRecords(accessContext, req.validatedQuery);
-  return Responses.paginatedResponse(res, "Attendance records fetched successfully", attendanceRecords, paginationMeta);
+  const { records, paginationMeta } = await AttendanceRecordService.getAttendanceRecords(accessContext, req.validatedQuery);
+  return Responses.paginatedResponse(res, "Attendance records fetched successfully", records, paginationMeta);
 };
 
 const AttendanceRecordController = {
