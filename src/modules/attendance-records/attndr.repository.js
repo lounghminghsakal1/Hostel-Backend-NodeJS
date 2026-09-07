@@ -22,15 +22,21 @@ const markAttendance = async (currentDate, capturedImageUrl, faceMatchingPercent
   });
 };
 
-const getAllMarkedAttendanceRecords = async (where, skip, take) => {
+const getAttendanceRecordsPresent = async (attendanceWhere, skip, take) => {
   return await prisma.attendanceRecord.findMany({
-    where: where,
+    where: attendanceWhere,
     skip,
     take
   });
 };
 
-const getTotalStudentsCount = async (hostelId) => {
+const getTotalCountOfAttendanceRecordPresent = async (attendanceWhere) => {
+  return await prisma.attendanceRecord.count({
+    where: attendanceWhere
+  });
+};
+
+const getTotalOfStudentsOfHostel = async (hostelId) => {
   return await prisma.studentProfile.count({
     where: {
       hostelId: hostelId
@@ -38,68 +44,74 @@ const getTotalStudentsCount = async (hostelId) => {
   });
 };
 
-const getDistinctAttendanceMarketStudentsCount = async (where) => {
+const getTotalOfStudentsWithAtleastOnePresentDuringRange = async (attendanceWhere) => {
   return await prisma.attendanceRecord.count({
-    where: where
+    where: attendanceWhere
   });
 };
 
-const getStudentsWithAbsenses = async (hostelId, startDate, endDate, expectedDatesStrings, totalExpectedDays, skip, take) => {
-  //get all students
+const getAbsentStudentsRecord = async (hostelId, expectedDates, skip, take) => {
   const students = await prisma.studentProfile.findMany({
     where: {
       hostelId
     },
     include: {
       attendanceRecords: {
-        where: {
-          attendanceDate: {
-            gte: startDate,
-            lt: endDate
-          }
-        },
-        select: {
-          attendanceDate: true
-        }
+        select: attendanceDate
       },
       department: {
-        select: departmentName
+        select: {
+          departmentName: true
+        }
       },
       room: {
-        select: roomNumber
+        select: {
+          roomNumber: true
+        }
       }
-
     }
   });
 
-  let absentStudents;
-  for(const student of students) {
-    const presentDates = new Set(student.attendanceRecords.map(r => r.attendanceDate.toISOString().split("T")[0]));
-    const absentDates = expectedDatesStrings.filter(eD => !presentDates.has(eD));
-    if(absentDates.length > 0) {
+  const absentStudents = [];
+  for (const student of students) {
+    const thisStudentPresentDates = new Set(
+      student.attendanceRecords.map(attendanceRecord => attendanceRecord.attendanceDate.toISOString().split("T")[0])
+    );
+    const thisStudentabsentDates = expectedDates.filter(expectedDate => !thisStudentPresentDates.has(expectedDate));
+  
+    if(thisStudentabsentDates.length > 0) {
       absentStudents.push({
         studentName: student.studentName,
-        rollNumber: student.rollNumber,
-        department: student.department.departmentName,
+        rollNumber: student.rollNumber ?? null,
+        contactNumber: student.contactNumber,
         roomNumber: student.room.roomNumber,
-        absentDates
+        department: student.department.departmentName,
+        parentMobileNumber: student.parentMobileNumber,
+        studentImageUrl: student.studentImageUrl
       });
     }
   }
 
+  const records = absentStudents.slice(
+    skip,
+    skip + take
+  );
+
   return {
-    totalCount: absentStudents.length,
-    records: absentStudents
-  };
+    dbRecords: records,
+    dbTotalCount: absentStudents.length
+  }
 };
+
 
 const AttendanceRecordRepository = {
   findHostelById,
   markAttendance,
-  getAllMarkedAttendanceRecords,
-  getTotalStudentsCount,
-  getDistinctAttendanceMarketStudentsCount,
-  getStudentsWithAbsenses
+  getAttendanceRecordsPresent,
+  getTotalCountOfAttendanceRecordPresent,
+  getTotalOfStudentsOfHostel,
+  getTotalOfStudentsWithAtleastOnePresentDuringRange,
+  getAbsentStudentsRecord,
 };
 
 export default AttendanceRecordRepository;

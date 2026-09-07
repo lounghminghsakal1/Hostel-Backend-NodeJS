@@ -14,6 +14,7 @@ const getAttendanceRecords = async (req, res) => {
   return Responses.paginatedResponse(res, "Attendance records fetched successfully", records, paginationMeta);
 };
 
+
 const AttendanceRecordController = {
   markAttendance,
   getAttendanceRecords

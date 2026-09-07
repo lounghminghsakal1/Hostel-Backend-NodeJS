@@ -2,6 +2,7 @@ import createHttpError from "http-errors";
 import AttendanceRecordRepository from "./attndr.repository.js";
 import { buildMeta, paginationQuerySchema, toPrismaPagination } from "../../utils/pagination.utils.js";
 import { currentDate, currentTime, getDateRange, getDatesListBetween } from "../../utils/dates.utils.js";
+//, getDatesListBetween
 
 const markAttendance = async (accessContext, markAttendanceRequestBody) => {
   const {
@@ -14,8 +15,8 @@ const markAttendance = async (accessContext, markAttendanceRequestBody) => {
   const hostel = await AttendanceRecordRepository.findHostelById(accessContext.loggedInStudentHostelId);
   if (!hostel) throw createHttpError(404, `Hostel with hostel id ${accessContext.loggedInStudentHostelId} not found`, { errors: "Invalid request" });
 
-  if (currentTime < hostel.attendanceMarkingStartTime) throw createHttpError(422, `Attendance marking time hasn't come yet, wait until ${hostel.attendanceMarkingStartTime}`, { errors: "Invalid request (start time haven't arrived yet)" });
-  if (currentTime > hostel.attendanceMarkingEndTime) throw createHttpError(422, `Attendance marking end time (${hostel.attendanceMarkingEndTime}) has already passed`, { errors: "Invalid request (end time passed)" });
+  if (currentTime() < hostel.attendanceMarkingStartTime) throw createHttpError(422, `Attendance marking time hasn't come yet, wait until ${hostel.attendanceMarkingStartTime}`, { errors: "Invalid request (start time haven't arrived yet)" });
+  if (currentTime() > hostel.attendanceMarkingEndTime) throw createHttpError(422, `Attendance marking end time (${hostel.attendanceMarkingEndTime}) has already passed`, { errors: "Invalid request (end time passed)" });
 
   //latitude and longitude processing
   const locationDeviationFromHostel = calculateDistanceFromHostelInMeters(latitude, longitude, hostel);
@@ -69,7 +70,6 @@ const getAttendanceRecords = async (accessContext, attendanceQuery) => {
 
   //so i need just total students count, attendance marked students count, absent count as normal data and the main data is above columns based on status 
 
-  //queries
   const {
     date,
     fromDate,
@@ -79,85 +79,83 @@ const getAttendanceRecords = async (accessContext, attendanceQuery) => {
     pageSize
   } = attendanceQuery;
 
+  console.log("fdfndf", date);
+  console.log(typeof date);
   //query validations
-  //1. date filter and range date filter cannot exist simultaneously
-  if (date && (fromDate || toDate)) throw createHttpError(422, "Both date and range dates(from and to date) filters can't be present at the same time in query", { errors: "invalid query" });
-  //2.from date and todate both must be present if opt for range filter(only one is provided like either fromdate or todate so it should not be like that)
-  if ((fromDate || toDate) && ((fromDate && !toDate) || (!fromDate || toDate))) throw createHttpError(422, "Both from date and to date must be present for range date filters", { errors: "Invalid query" });
-  //3.fromdate must be past to todate
-  if ((fromDate && toDate) && new Date(fromDate) > new Date(toDate)) throw createHttpError(422, "From date should be past to to date", { errors: "Invalid query" });
+  if (date && (fromDate || toDate)) throw createHttpError(422, "Both date filter and range filter cannot exist simultaneously", { errors: "Invalid date filters" });
+  if ((fromDate || toDate) && ((fromDate && !toDate) || (!fromDate && toDate))) throw createHttpError(422, "Both fromDate and toDate is required for range date filter", { errors: "Invalid date filters" });
+  if (fromDate > toDate) throw createHttpError(422, "From date must be past to to date", { errors: "Invalid range date filters" });
 
-  //constructing date of where query
+  //resolving range date (fromDate and toDate) for where clause
   let attendanceWhere;
-  let startDate, endDate, rawStartDate, rawEndDate;
+  let startDate, endDate;
 
   if (date) {
-    rawStartDate = date;
-    rawEndDate = date;
     ({ startDate, endDate } = getDateRange(date, date));
   } else if (fromDate && toDate) {
-    rawStartDate = fromDate;
-    rawEndDate = endDate;
     ({ startDate, endDate } = getDateRange(fromDate, toDate));
   } else {
-    rawStartDate = currentDate;
-    rawEndDate = currentDate;
-    ({ startDate, endDate } = getDateRange(currentDate));
+    ({ startDate, endDate } = getDateRange(currentDate()));
   }
-
-  //Expected dates as array of strings
-  const expectedDatesStrings = getDatesListBetween(rawStartDate, rawEndDate);
-  const totalExpectedDays = expectedDatesStrings.length;
-  const hostelId = accessContext.loggedInAdminHostelId;
 
   attendanceWhere = {
     attendanceDate: {
       gte: startDate,
       lt: endDate
-    },
-    student: {
-      hostelId: hostelId
     }
   };
-  //pagination query 
-  const prismaPaginationQuery = toPrismaPagination(page, pageSize);
 
-  //based on status , query records
+  //attaching hostel scope to attendanceWhere
+  const hostelId = accessContext.loggedInAdminHostelId;
+  attendanceWhere.hostelId = hostelId;
+
+  //get prisma pagination to query in database
+  const prismaPagination = toPrismaPagination(page, pageSize);
+
+  //records based on present or absent
   let records;
-  let totalRecordsForPagination;
+  let totalCount;
+
   if (status === "absent") {
-    // here i need expected attendance records count so based on that only i can query because our requirement is for a range date query for example -> from sept 10 to sept 14 the students who absent for atleast 1 day should be included in this record
-    ({totalRecordsForPagination, records} = await AttendanceRecordRepository.getStudentsWithAbsenses(hostelId, startDate, endDate, expectedDatesStrings, totalExpectedDays, prismaPaginationQuery.skip, prismaPaginationQuery.take));
+    const datesList = getDatesListBetween(startDate, endDate);
+    const {dbRecords, dbTotalCount} = await AttendanceRecordRepository.getAbsentStudentsRecord(hostelId, datesList);
+    records = dbRecords;
+    totalCount = dbTotalCount;
   } else {
-    records = await AttendanceRecordRepository.getAllMarkedAttendanceRecords(attendanceWhere, prismaPaginationQuery.skip, prismaPaginationQuery.take);
+    [records, totalCount] = await Promise.all(
+      [
+        AttendanceRecordRepository.getAttendanceRecordsPresent(attendanceWhere, prismaPagination.skip, prismaPagination.take),
+        AttendanceRecordRepository.getTotalCountOfAttendanceRecordPresent(attendanceWhere)
+      ]
+    );
   }
 
+  // get Summary 
+  const totalStudentsOfTheHostel = await AttendanceRecordRepository.getTotalOfStudentsOfHostel(hostelId);
+  const totalStudentsWithatleastOnePresentDuringDateFilter = await AttendanceRecordRepository.getTotalOfStudentsWithAtleastOnePresentDuringRange(attendanceWhere);
+  const completelyAbsentStudentsCountDuringDates = totalStudentsOfTheHostel - totalStudentsWithatleastOnePresentDuringDateFilter;
 
-  //get summary data
-  const totalStudentsCount = await AttendanceRecordRepository.getTotalStudentsCount(hostelId);
-  const distinctAttendanceStudentsCount = await AttendanceRecordRepository.getDistinctAttendanceMarketStudentsCount(attendanceWhere, hostelId);
-  const completelyAbsentStudentsCount = totalStudentsCount - distinctAttendanceStudentsCount;
-
-
-  //getPaginationMeta
-  const paginationMeta = buildMeta(page, pageSize, records.length);
+  //get pagination meta
+  const paginationMeta = buildMeta(page, pageSize, totalCount);
 
   return {
     records: {
-      records,
       summary: {
-        totalStudentsCount,
-        distinctAttendanceStudentsCount,
-        completelyAbsentStudentsCount
-      }
+        totalStudentsOfTheHostel,
+        totalStudentsWithatleastOnePresentDuringDateFilter,
+        completelyAbsentStudentsCountDuringDates
+      },
+      attendanceRecords: records
     },
-    paginationMeta: paginationMeta
+    paginationMeta
   };
 };
 
+
+
 const AttendanceRecordService = {
   markAttendance,
-  getAttendanceRecords,
+  getAttendanceRecords
 };
 
 export default AttendanceRecordService;
