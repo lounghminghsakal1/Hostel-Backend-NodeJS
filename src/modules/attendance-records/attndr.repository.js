@@ -1,13 +1,15 @@
 import { prisma } from "../../configs/db.js";
 
 const findHostelById = async (id) => {
-  return prisma.hostel.findUnique({
-    id: id
+  return await prisma.hostel.findUnique({
+    where: {
+      id: id
+    }
   });
 };
 
 const markAttendance = async (currentDate, capturedImageUrl, faceMatchingPercentage, latitude, longitude, isLocatedWithinHostelRadius, locationDeviationFromHostel, loggedInStudentProfileId) => {
-  await prisma.attendanceRecord.create({
+  return await prisma.attendanceRecord.create({
     data: {
       attendanceDate: currentDate,
       capturedImageUrl: capturedImageUrl,
@@ -78,8 +80,8 @@ const getAbsentStudentsRecord = async (hostelId, expectedDates, skip, take) => {
       student.attendanceRecords.map(attendanceRecord => attendanceRecord.attendanceDate.toISOString().split("T")[0])
     );
     const thisStudentabsentDates = expectedDates.filter(expectedDate => !thisStudentPresentDates.has(expectedDate));
-  
-    if(thisStudentabsentDates.length > 0) {
+
+    if (thisStudentabsentDates.length > 0) {
       absentStudents.push({
         studentName: student.studentName,
         rollNumber: student.rollNumber ?? null,
@@ -103,6 +105,14 @@ const getAbsentStudentsRecord = async (hostelId, expectedDates, skip, take) => {
   }
 };
 
+const findStudentProfileById = async (studentProfileId) => {
+  return await prisma.studentProfile.findUnique({
+    where: {
+      id: studentProfileId
+    }
+  });
+};
+
 
 const AttendanceRecordRepository = {
   findHostelById,
@@ -112,6 +122,7 @@ const AttendanceRecordRepository = {
   getTotalOfStudentsOfHostel,
   getTotalOfStudentsWithAtleastOnePresentDuringRange,
   getAbsentStudentsRecord,
+  findStudentProfileById
 };
 
 export default AttendanceRecordRepository;

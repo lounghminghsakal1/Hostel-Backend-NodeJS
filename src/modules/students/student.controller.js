@@ -1,5 +1,6 @@
 import Responses from "../../utils/responses.utils.js";
 import StudentService from "./student.service.js";
+import { getAccessContext } from "../../utils/helper-functions.utils.js";
 
 const createStudent = async (req, res, next) => {
   const accessContext = getAccessContext(req);
@@ -37,20 +38,28 @@ const changeOrAssignStudentRoom = async (req, res) => {
   return Responses.successResponse(res, "Student room changed or assigned successfully", StudentProfile);
 };
 
+const getStudentHomeScreenData = async (req, res) => {
+  console.log("ldfdsdjfnkrjfnsj");
+  const accessContext = getAccessContext(req);
+  const homeScreenData = await StudentService.getStudentHomeScreenData(accessContext);
+  return Responses.successResponse(res, "Student home screen data fetched successfully", homeScreenData);
+}; 
+
 const StudentController = {
   createStudent,
   getAllStudentProfiles,
   getOneStudentProfile,
   updateStudentProfile,
   updateStatusOfStudent,
-  changeOrAssignStudentRoom
+  changeOrAssignStudentRoom,
+  getStudentHomeScreenData
 };
 
-const getAccessContext = (req) => {
-  return {
-    loggedInAdminHostelId: req.user.hostelAdminProfile.hostelId,
-    loggedInAdminCollegeId: req.user.collegeId
-  };
-};
+// const getAccessContext = (req) => {
+//   return {
+//     loggedInAdminHostelId: req.user.hostelAdminProfile.hostelId,
+//     loggedInAdminCollegeId: req.user.collegeId
+//   };
+// };
 
 export default StudentController;

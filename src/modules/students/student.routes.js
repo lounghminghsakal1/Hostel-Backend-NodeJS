@@ -9,9 +9,15 @@ const studentRouter = express.Router();
 
 const hostelAdminRole = "HOSTEL_ADMIN";
 
+const studentRole = "STUDENT";
+
 studentRouter.post("/", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware({body: createStudentProfileRequestBodySchema}), StudentController.createStudent);
 
 studentRouter.get("/", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), StudentController.getAllStudentProfiles);
+
+// IMPORTANT: specific/static routes first, if not then /home matches other route by mistake like /:id can be matched so put static routes first (i am debugging this for 30mins and finally found and learnt a new thing now)
+//student flow home screen data
+studentRouter.get("/home", authenticateUserMiddleware, authorizeUserMiddleware(studentRole), StudentController.getStudentHomeScreenData);
 
 studentRouter.get("/:id", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), StudentController.getOneStudentProfile);
 
@@ -21,8 +27,5 @@ studentRouter.patch("/:id/status", authenticateUserMiddleware, authorizeUserMidd
 
 
 studentRouter.patch("/:id/room", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware({body: changeOrAssignStudentRoomRequestBodySchema}), StudentController.changeOrAssignStudentRoom);
-
-
-
 
 export default studentRouter;

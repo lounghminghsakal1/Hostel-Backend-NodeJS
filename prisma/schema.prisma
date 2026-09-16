@@ -126,7 +126,7 @@ model StudentProfile {
   contactNumber      String @unique
   parentMobileNumber String
   studentImageUrl    String?
-  rollNumber         String?
+  rollNumber         String
 
   userId       Int  @unique
   departmentId Int
@@ -198,7 +198,7 @@ model AttendanceRecord {
   latitude              Float
   longitude             Float
   isLocatedWithinHostelRadius Boolean  @default(false)
-  locationDeviationFromhostel     Float?
+  locationDeviationFromHostel     Float?
   
   studentId Int
       

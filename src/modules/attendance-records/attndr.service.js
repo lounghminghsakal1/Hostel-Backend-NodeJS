@@ -15,20 +15,51 @@ const markAttendance = async (accessContext, markAttendanceRequestBody) => {
   const hostel = await AttendanceRecordRepository.findHostelById(accessContext.loggedInStudentHostelId);
   if (!hostel) throw createHttpError(404, `Hostel with hostel id ${accessContext.loggedInStudentHostelId} not found`, { errors: "Invalid request" });
 
-  if (currentTime() < hostel.attendanceMarkingStartTime) throw createHttpError(422, `Attendance marking time hasn't come yet, wait until ${hostel.attendanceMarkingStartTime}`, { errors: "Invalid request (start time haven't arrived yet)" });
-  if (currentTime() > hostel.attendanceMarkingEndTime) throw createHttpError(422, `Attendance marking end time (${hostel.attendanceMarkingEndTime}) has already passed`, { errors: "Invalid request (end time passed)" });
+  // if (currentTime() < hostel.attendanceMarkingStartTime) throw createHttpError(422, `Attendance marking time hasn't come yet, wait until ${hostel.attendanceMarkingStartTime}`, { errors: "Invalid request (start time haven't arrived yet)" });
+  // if (currentTime() > hostel.attendanceMarkingEndTime) throw createHttpError(422, `Attendance marking end time (${hostel.attendanceMarkingEndTime}) has already passed`, { errors: "Invalid request (end time passed)" });
 
   //latitude and longitude processing
   const locationDeviationFromHostel = calculateDistanceFromHostelInMeters(latitude, longitude, hostel);
   const isLocatedWithinHostelRadius = locationDeviationFromHostel <= hostel.attendanceRadius;
 
-  let faceMatchingPercentage = 90;
   //Image processing ()
 
+  //fetch student record to get base image
+  let faceMatchingPercentage = 0;
+  const student = await AttendanceRecordRepository.findStudentProfileById(accessContext.loggedInStudentProfileId);
 
+  if (!student.studentImageUrl) {
+
+  }
+
+  //check whether face verfication server(python fast api server is running or not)
+  const faceVerfificationServerResponse = fetch("http://127.0.0.1:8000/health", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json"
+    }
+  }).then(res => res.json());
+
+  if (faceVerfificationServerResponse.model_loaded === false) {
+    throw createHttpError(500, "Face verification python fast api server is not running", { errors: "Python fast api - Face verification server error" });
+  }
+
+  const resultOfFaceVerification = fetch("http://127.0.0.1:8000/face/verify", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      "base_image": student.studentImageUrl,
+      "captured_image": capturedImageUrl,
+      "threshold": 0.5
+    })
+  }).then(res => res.json());
+
+  faceMatchingPercentage = resultOfFaceVerification.face_matching_percentage ?? 0;
 
   //creating attendance record in DB
-  const createdAttendanceRecord = await AttendanceRecordRepository.markAttendance(currentDate, capturedImageUrl, faceMatchingPercentage, latitude, longitude, isLocatedWithinHostelRadius, locationDeviationFromHostel, accessContext.loggedInStudentProfileId);
+  const createdAttendanceRecord = await AttendanceRecordRepository.markAttendance(new Date(), capturedImageUrl, faceMatchingPercentage, latitude, longitude, isLocatedWithinHostelRadius, locationDeviationFromHostel, accessContext.loggedInStudentProfileId);
 
   return createdAttendanceRecord;
 };
@@ -78,9 +109,7 @@ const getAttendanceRecords = async (accessContext, attendanceQuery) => {
     page,
     pageSize
   } = attendanceQuery;
-
-  console.log("fdfndf", date);
-  console.log(typeof date);
+  
   //query validations
   if (date && (fromDate || toDate)) throw createHttpError(422, "Both date filter and range filter cannot exist simultaneously", { errors: "Invalid date filters" });
   if ((fromDate || toDate) && ((fromDate && !toDate) || (!fromDate && toDate))) throw createHttpError(422, "Both fromDate and toDate is required for range date filter", { errors: "Invalid date filters" });
@@ -118,7 +147,7 @@ const getAttendanceRecords = async (accessContext, attendanceQuery) => {
 
   if (status === "absent") {
     const datesList = getDatesListBetween(startDate, endDate);
-    const {dbRecords, dbTotalCount} = await AttendanceRecordRepository.getAbsentStudentsRecord(hostelId, datesList);
+    const { dbRecords, dbTotalCount } = await AttendanceRecordRepository.getAbsentStudentsRecord(hostelId, datesList);
     records = dbRecords;
     totalCount = dbTotalCount;
   } else {

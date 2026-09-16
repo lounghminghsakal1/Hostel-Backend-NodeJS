@@ -27,6 +27,7 @@ const authenticateUserMiddleware = async (req, res, next) => {
       hostelAdminProfile: {
         select: {
           hostelId: true,
+          collegeId: true
         }
       },
       studentProfile: true,

@@ -2,6 +2,7 @@ import createHttpError from "http-errors";
 import { prisma } from "../../configs/db.js";
 import StudentRepository from "./student.repository.js";
 import bcrypt from "bcrypt";
+import { currentTime } from "../../utils/dates.utils.js";
 
 const createStudent = async (studentRequestBody, accessContext) => {
   const {
@@ -188,6 +189,29 @@ const changeOrAssignStudentRoom = async (studentId, roomId, accessContext) => {
 
 };
 
+const getStudentHomeScreenData = async (accessContext) => {
+  console.log("ldfds");
+  //In home screen , Mark attendance button will be shown only when the corressponding hostel's attendance marking time is achieved so checking the current time is equal or more than that and within end time also
+  const hostel = await StudentRepository.getHostelOftheStudent(accessContext.loggedInStudentHostelId);
+  if(!hostel) {}
+
+  //if current time lies btw attendance marking start and end time then canMarkAttendance is true
+  let canMarkAttendance;
+  if(currentTime() >= hostel.attendanceMarkingStartTime && currentTime() <= hostel.attendanceMarkingEndTime) {
+    canMarkAttendance = true;
+  } else {
+    canMarkAttendance = false;
+  }
+
+  let announcementsData = [];
+
+  return {
+    canMarkAttendance,
+    announcementsData
+  };
+
+};
+
 
 const StudentService = {
   createStudent,
@@ -195,7 +219,8 @@ const StudentService = {
   getOneStudentProfileById,
   updateStudentProfile,
   updateStatusOfStudent,
-  changeOrAssignStudentRoom
+  changeOrAssignStudentRoom,
+  getStudentHomeScreenData
 };
 
 export default StudentService;

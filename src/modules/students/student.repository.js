@@ -140,7 +140,7 @@ const findStudentProfileById = async (id, hostelId, collegeId) => {
   return studentProfile;
 };
 
-const updateStudentProfile = async (tx, id, studentName, contactNumber, parentMobileNumber, departmentId, roomId) => {
+const updateStudentProfile = async (tx, id, studentName, contactNumber, parentMobileNumber, departmentId, roomId, studentImageUrl) => {
   
   return tx.studentProfile.update({
     where: {
@@ -191,6 +191,20 @@ const updateRoomOfThestudent = async (studentId, roomId) => {
   });
 };
 
+const getHostelOftheStudent = async (hostelIdOfStudent) => {
+  return await prisma.hostel.findUnique({
+    where: {
+      id: hostelIdOfStudent
+    },
+    select: {
+      id: true,
+      hostelName: true,
+      attendanceMarkingStartTime: true,
+      attendanceMarkingEndTime: true
+    }
+  });
+};
+
 const StudentRepository = {
   findUserByEmail,
   findStudentProfileByContactNumber,
@@ -207,7 +221,8 @@ const StudentRepository = {
   updateStudentProfile,
   findUserById,
   updateStatusOfStudent,
-  updateRoomOfThestudent
+  updateRoomOfThestudent,
+  getHostelOftheStudent
 };
 
 export default StudentRepository;
