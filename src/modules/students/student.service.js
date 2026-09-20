@@ -190,7 +190,6 @@ const changeOrAssignStudentRoom = async (studentId, roomId, accessContext) => {
 };
 
 const getStudentHomeScreenData = async (accessContext) => {
-  console.log("ldfds");
   //In home screen , Mark attendance button will be shown only when the corressponding hostel's attendance marking time is achieved so checking the current time is equal or more than that and within end time also
   const hostel = await StudentRepository.getHostelOftheStudent(accessContext.loggedInStudentHostelId);
   if(!hostel) {}
@@ -198,9 +197,15 @@ const getStudentHomeScreenData = async (accessContext) => {
   //if current time lies btw attendance marking start and end time then canMarkAttendance is true
   let canMarkAttendance;
   if(currentTime() >= hostel.attendanceMarkingStartTime && currentTime() <= hostel.attendanceMarkingEndTime) {
-    canMarkAttendance = true;
+    //Now attendance marking window is opened , now check whether student has already marked attendance for today date or not
+    const todayMarkedAttendace = await StudentRepository.getTodayMarkedAttendanceOfStudent(accessContext.loggedInStudentProfileId);
+    if(todayMarkedAttendace) { //already attendance marked
+      canMarkAttendance = false;
+    } else {
+      canMarkAttendance = true;
+    }
   } else {
-    canMarkAttendance = false;
+    canMarkAttendance = true; // canMarkAttendance = false; (false is correct but i commented it for testing purpose)
   }
 
   let announcementsData = [];

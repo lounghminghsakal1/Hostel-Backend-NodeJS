@@ -39,7 +39,6 @@ const changeOrAssignStudentRoom = async (req, res) => {
 };
 
 const getStudentHomeScreenData = async (req, res) => {
-  console.log("ldfdsdjfnkrjfnsj");
   const accessContext = getAccessContext(req);
   const homeScreenData = await StudentService.getStudentHomeScreenData(accessContext);
   return Responses.successResponse(res, "Student home screen data fetched successfully", homeScreenData);

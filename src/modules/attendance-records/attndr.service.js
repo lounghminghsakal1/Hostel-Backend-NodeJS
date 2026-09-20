@@ -33,7 +33,7 @@ const markAttendance = async (accessContext, markAttendanceRequestBody) => {
   }
 
   //check whether face verfication server(python fast api server is running or not)
-  const faceVerfificationServerResponse = fetch("http://127.0.0.1:8000/health", {
+  const faceVerfificationServerResponse = await fetch("http://127.0.0.1:8000/health", {
     method: "GET",
     headers: {
       "Content-Type": "application/json"
@@ -44,7 +44,7 @@ const markAttendance = async (accessContext, markAttendanceRequestBody) => {
     throw createHttpError(500, "Face verification python fast api server is not running", { errors: "Python fast api - Face verification server error" });
   }
 
-  const resultOfFaceVerification = fetch("http://127.0.0.1:8000/face/verify", {
+  const resultOfFaceVerification= await fetch("http://127.0.0.1:8000/face/verify", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -58,6 +58,7 @@ const markAttendance = async (accessContext, markAttendanceRequestBody) => {
 
   faceMatchingPercentage = resultOfFaceVerification.face_matching_percentage ?? 0;
 
+  console.log(resultOfFaceVerification);
   //creating attendance record in DB
   const createdAttendanceRecord = await AttendanceRecordRepository.markAttendance(new Date(), capturedImageUrl, faceMatchingPercentage, latitude, longitude, isLocatedWithinHostelRadius, locationDeviationFromHostel, accessContext.loggedInStudentProfileId);
 

@@ -205,6 +205,15 @@ const getHostelOftheStudent = async (hostelIdOfStudent) => {
   });
 };
 
+const getTodayMarkedAttendanceOfStudent = async (studentProfileId) => {
+  return await prisma.attendanceRecord.findFirst({
+    where: {
+      studentId: studentProfileId,
+      attendanceDate: new Date()
+    }
+  });
+};
+
 const StudentRepository = {
   findUserByEmail,
   findStudentProfileByContactNumber,
@@ -222,7 +231,8 @@ const StudentRepository = {
   findUserById,
   updateStatusOfStudent,
   updateRoomOfThestudent,
-  getHostelOftheStudent
+  getHostelOftheStudent,
+  getTodayMarkedAttendanceOfStudent,
 };
 
 export default StudentRepository;
