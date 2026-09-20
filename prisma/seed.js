@@ -102,10 +102,12 @@ async function main() {
     where: {
       email: "sushvinth@gmail.com"
     },
-    update: {},
+    update: {
+      passwordHash: "$2a$12$16U67So.JYDj7WX3vm4hpuSgJvEMwKaZ9UvDJlu6U4ZdCPy07TjzS"
+    },
     create: {
       email: "sushvinth@gmail.com",
-      passwordHash: "$2a$12$7qtImmU60KkPBrvXRcsj2.FpAQXQTW92RZ/eROYzyPXcffDhUAKpa",
+      passwordHash: "$2a$12$16U67So.JYDj7WX3vm4hpuSgJvEMwKaZ9UvDJlu6U4ZdCPy07TjzS",
       status: "ACTIVE",
       roleId: hostelAdminRole.id,  //the above hostelAdminRole query is just for to use it here
       collegeId: college.id
