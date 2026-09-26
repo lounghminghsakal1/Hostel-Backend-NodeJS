@@ -20,3 +20,9 @@ export const updateStudentStatusRequestBodySchema = z.object({
 export const changeOrAssignStudentRoomRequestBodySchema = z.object({
   roomId: z.int().positive()
 });
+
+
+export const setupNewPasswordSchema = z.object({
+  token: z.string(),
+  newPassword: z.string()
+});

@@ -62,11 +62,10 @@ const findRoleByRoleName = (tx, roleName) => {
   });
 };
 
-const createUser = async (tx, email, passwordHash, roleId, collegeId) => {
+const createUser = async (tx, email, roleId, collegeId) => {
   return tx.user.create({
     data: {
       email: email,
-      passwordHash: passwordHash,
       roleId: roleId,
       collegeId: collegeId,
       mustChangePassword: true
@@ -215,6 +214,46 @@ const getTodayMarkedAttendanceOfStudent = async (studentProfileId) => {
   });
 };
 
+const createAccountSetupTokenRecord = async (tx, userId, tokenHash, expiresAt) => {
+  return await tx.accountSetupToken.create({
+    data: {
+      userId: userId,
+      tokenHash: tokenHash,
+      expiresAt: expiresAt
+    }
+  });
+};
+
+const findToken = async (hashedToken) => {
+  return await prisma.accountSetupToken.findFirst({
+    where: {
+      tokenHash: hashedToken
+    }
+  });
+};
+
+const setupNewPasswordToUser = async (userId, hashedPassword) => {
+  return await prisma.user.update({
+    where: {
+      id: userId
+    },
+    data: {
+      passwordHash: hashedPassword
+    }
+  });
+};
+
+const updatedAccountSetupTokenRecord = async (id) => {
+  return await prisma.accountSetupToken.update({
+    where: {
+      id: id
+    },
+    data: {
+      usedAt: new Date()
+    }
+  });
+};
+
 const StudentRepository = {
   findUserByEmail,
   findStudentProfileByContactNumber,
@@ -234,6 +273,10 @@ const StudentRepository = {
   updateRoomOfThestudent,
   getHostelOftheStudent,
   getTodayMarkedAttendanceOfStudent,
+  createAccountSetupTokenRecord,
+  findToken,
+  setupNewPasswordToUser,
+  updatedAccountSetupTokenRecord
 };
 
 export default StudentRepository;

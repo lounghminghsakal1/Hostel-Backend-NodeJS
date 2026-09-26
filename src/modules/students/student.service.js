@@ -4,6 +4,9 @@ import StudentRepository from "./student.repository.js";
 import bcrypt from "bcrypt";
 import { currentTime } from "../../utils/dates.utils.js";
 import { getS3SignedUrlByKey } from "../../utils/helper-functions.utils.js";
+import { generateActivationToken, getHashedVersionOfToken } from "../../utils/activation-token.utils.js";
+import sendEmail from "../../services/email.service.js";
+import { getHasedVersionOfPassword } from "../../utils/password.utils.js";
 
 const createStudent = async (studentRequestBody, accessContext) => {
   const {
@@ -18,7 +21,7 @@ const createStudent = async (studentRequestBody, accessContext) => {
   } = studentRequestBody;
 
 
-  return await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
 
     //check email is already registered or not
     const existingUser = await StudentRepository.findUserByEmail(tx, email);
@@ -54,19 +57,32 @@ const createStudent = async (studentRequestBody, accessContext) => {
     if (!studentRole) throw createHttpError(404, "Student role not found, so create a student role first", { errors: "Student role not found" });
 
     //temp password hash to set it in db
-    const tempPassword = await bcrypt.hash("Sakal@123", 12);
+    // const tempPassword = await bcrypt.hash("Sakal@123", 12);    --- now changed to link activation approach
 
     //ALL validations are finished and passed so now create user
-    const createdUser = await StudentRepository.createUser(tx, email, tempPassword, studentRole.id, accessContext.loggedInAdminCollegeId);
+    const createdUser = await StudentRepository.createUser(tx, email, studentRole.id, accessContext.loggedInAdminCollegeId);
 
     //user created now studentprofile has to be created
     const createdStudentProfile = await StudentRepository.createStudentProfile(tx, studentName, contactNumber, parentMobileNumber, createdUser.id, departmentId, rollNumber, roomId, studentImageKey, accessContext.loggedInAdminCollegeId, accessContext.loggedInAdminHostelId);
 
+    //create account setup token record and send email to student containing the activation link (page_route?token=GeneratedToken) 
+    const { rawToken, hashedToken } = generateActivationToken();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+    await StudentRepository.createAccountSetupTokenRecord(tx, createdUser.id, hashedToken, expiresAt);
+
     return {
       createdUser,
-      createdStudentProfile
+      createdStudentProfile,
+      rawToken
     };
   });
+
+  const activationLink = `https://ourhostel.in/setup-password?token=${result.rawToken}`;
+  //send email to student containing activation link
+  const emailResponse = await sendEmail(result.createdUser.email, "Account activation for ourhostel.in", "Please click the link to activate your account, the link will be expired in 5 mins", `<h1>Hoooo, ${activationLink}</h1>`)
+
+  return result;
 };
 
 
@@ -78,10 +94,10 @@ const getOneStudentProfileById = async (id, accessContext) => {
   const oneStudent = await StudentRepository.getOneStudentProfileById(id, accessContext.loggedInAdminHostelId, accessContext.loggedInAdminCollegeId);
   if (oneStudent === null) throw createHttpError(404, `Student with id ${id} is not found`, { errors: "Student id not found in the database" });
   let studentImageUrl = null;
-  if(oneStudent.studentImageKey) {
+  if (oneStudent.studentImageKey) {
     studentImageUrl = await getS3SignedUrlByKey(oneStudent.studentImageKey, 3600);
   }
-  return {...oneStudent, studentImageUrl};
+  return { ...oneStudent, studentImageUrl };
 };
 
 const updateStudentProfile = async (id, updateStudentProfileRequestBody, accessContext) => {
@@ -101,7 +117,7 @@ const updateStudentProfile = async (id, updateStudentProfileRequestBody, accessC
 
   //check whether this student's status is active or not -> if active then only can update else not - college and hostel scope may need or may not 
   const user = await StudentRepository.findUserById(studentProfile.userId);
-  if(user.status !== "ACTIVE") throw createHttpError(409, `Student profile is not active, currently its ${user.status}, so if want then change the status of the student profile and update`, {errors: "Student profile is not active"});
+  if (user.status !== "ACTIVE") throw createHttpError(409, `Student profile is not active, currently its ${user.status}, so if want then change the status of the student profile and update`, { errors: "Student profile is not active" });
 
   return await prisma.$transaction(async (tx) => {
 
@@ -117,39 +133,38 @@ const updateStudentProfile = async (id, updateStudentProfileRequestBody, accessC
     if (contactNumber) {
       //contact number is unique field so if passed we should check and update it
       const existingStudentProfileWithThisContactNumber = await StudentRepository.findStudentProfileByContactNumber(tx, contactNumber);
-      if(existingStudentProfileWithThisContactNumber) throw createHttpError(409, "Student profile with this new contact number is already exists", { errors: "Contact number already exists" });
+      if (existingStudentProfileWithThisContactNumber) throw createHttpError(409, "Student profile with this new contact number is already exists", { errors: "Contact number already exists" });
 
       //update -> contact number but since all other fields are also in studentprofile entity we can update in 1 query at last after all validations are passed
     }
 
-    if(departmentId) {
+    if (departmentId) {
       //check department exists or not 
       const department = await StudentRepository.findDepartmentById(tx, departmentId, accessContext.loggedInAdminCollegeId);
-      if(!department) throw createHttpError(404, `Department not found`, {errors: "Invalid department id"});
+      if (!department) throw createHttpError(404, `Department not found`, { errors: "Invalid department id" });
 
       //check this department's college belongs to logged hostel_admin's hostel's college or not 
       // so for that department.collegeId is need which we already have now we need logged in hostel_admin's collegeId , 
       //so we already have hostelId which is logged in hostel_admin's hostel id so using that we can find that hostel and we can get hostel.collegeId of that
       // const hostelOfLoggedInHostelAdmin = await StudentRepository.findHostelById(tx, accessContext.loggedInAdminHostelId);
       // if(!hostelOfLoggedInHostelAdmin) throw createHttpError(404, "Hostel id is not found", "Invalid hostel id of logged in admin");
-      
-      if(department.collegeId !== accessContext.loggedInAdminCollegeId) throw createHttpError(409, "Invalid college id passed, you cannot change this student profile to this college id", {errors: "Hostel admin's hostel doesn't belongs to this college id"});
+
+      if (department.collegeId !== accessContext.loggedInAdminCollegeId) throw createHttpError(409, "Invalid college id passed, you cannot change this student profile to this college id", { errors: "Hostel admin's hostel doesn't belongs to this college id" });
     }
 
-    if(roomId) {
+    if (roomId) {
       //check roomId is valid or not 
       const room = await StudentRepository.findRoomById(tx, roomId, accessContext.loggedInAdminHostelId);
-      if(!room) throw createHttpError(404, `Room not found with id as ${roomId}`, {errors: "Invalid room id"});
+      if (!room) throw createHttpError(404, `Room not found with id as ${roomId}`, { errors: "Invalid room id" });
 
       //check this room.hostelId belongs to logged in hostel admin's hostel id or not
-      if(room.hostelId !== accessContext.loggedInAdminHostelId) throw createHttpError(409, "You cannot assign room which is not belongs to your hostel", {errors: "Invalid room id"});
+      if (room.hostelId !== accessContext.loggedInAdminHostelId) throw createHttpError(409, "You cannot assign room which is not belongs to your hostel", { errors: "Invalid room id" });
 
-      if(room.capacity === room._count.studentProfiles) throw createHttpError(409, "Room is already full", {errors: "Invalid room id"});
+      if (room.capacity === room._count.studentProfiles) throw createHttpError(409, "Room is already full", { errors: "Invalid room id" });
     }
 
     //ALL validations are passed so update student profile
     const updatedStudentProfile = await StudentRepository.updateStudentProfile(tx, studentProfile.id, studentName, contactNumber, parentMobileNumber, departmentId, roomId, studentImageKey);
-
 
     return updatedStudentProfile;
   });
@@ -158,51 +173,51 @@ const updateStudentProfile = async (id, updateStudentProfileRequestBody, accessC
 const updateStatusOfStudent = async (studentId, status, accessContext) => {
   //check student with id is present or not - college or hostel scoped
   const student = await StudentRepository.findStudentProfileById(studentId, accessContext.loggedInAdminHostelId, accessContext.loggedInAdminCollegeId);
-  if(!student) throw createHttpError(404, `Student with id ${studentId} not found`, {errors: "Invalid student id"});
+  if (!student) throw createHttpError(404, `Student with id ${studentId} not found`, { errors: "Invalid student id" });
 
   //check the passed status and already student's status is same or not , if same throw error that its already in that staus only
-  if(status === student.user.status) throw createHttpError(409, `Student's status is already ${student.user.status}`, {errors: "Invalid status"});
+  if (status === student.user.status) throw createHttpError(409, `Student's status is already ${student.user.status}`, { errors: "Invalid status" });
 
   const updatedUserProfileOfThatStudent = await StudentRepository.updateStatusOfStudent(student.user.id, status); //here scope may need or may not need - here i didn't do because the user id is get from student.user.id and that student is fetched after passing scope so
-  return StudentRepository.findStudentProfileById(studentId,accessContext.loggedInAdminHostelId, accessContext.loggedInAdminCollegeId);
+  return StudentRepository.findStudentProfileById(studentId, accessContext.loggedInAdminHostelId, accessContext.loggedInAdminCollegeId);
 };
 
 const changeOrAssignStudentRoom = async (studentId, roomId, accessContext) => {
   //check student with id present or not
   const studentProfile = await StudentRepository.findStudentProfileById(studentId, accessContext.loggedInAdminHostelId, accessContext.loggedInAdminCollegeId);
-  if(!studentProfile) throw createHttpError(404, `Student with id ${studentId} not found`, {errors: "Invalid student id"});
+  if (!studentProfile) throw createHttpError(404, `Student with id ${studentId} not found`, { errors: "Invalid student id" });
 
   //check room with id present or not
   const room = await StudentRepository.findRoomById(prisma, roomId, accessContext.loggedInAdminHostelId);
-  if(!room) throw createHttpError(404, `Room not found with id ${roomId}`, {errors: "Invalid room id"});
+  if (!room) throw createHttpError(404, `Room not found with id ${roomId}`, { errors: "Invalid room id" });
 
   //check that the student belongs to logged in admin's hostel or not 
-  if(studentProfile.room && studentProfile.room.hostelId !== accessContext.loggedInAdminHostelId) throw createHttpError(409, "The student doen't belongs to your hostel", {errors: "Invalid student id"});
+  if (studentProfile.room && studentProfile.room.hostelId !== accessContext.loggedInAdminHostelId) throw createHttpError(409, "The student doen't belongs to your hostel", { errors: "Invalid student id" });
 
   //room.hostel id must match with logged admin hostel id
-  if(room.hostelId !== accessContext.loggedInAdminHostelId) throw createHttpError(409, `This room doesn't belongs to your hostel`, {errors: "Invalid room id"});
+  if (room.hostelId !== accessContext.loggedInAdminHostelId) throw createHttpError(409, `This room doesn't belongs to your hostel`, { errors: "Invalid room id" });
 
   //check room has capacity or not 
-  if(room._count.studentProfiles === room.capacity) throw createHttpError(409, `Room is alread full (capacity - ${room.capacity})`, {errors: "Room is full"});
+  if (room._count.studentProfiles === room.capacity) throw createHttpError(409, `Room is alread full (capacity - ${room.capacity})`, { errors: "Room is full" });
 
   //ok now room has capacity so now can assign (or change) that room to that student
   const roomAssignedOrChangedStudentProfile = await StudentRepository.updateRoomOfThestudent(studentId, roomId); //here also the passed student id is validated that this is college scoped and hostel scoped because at first line of this service function itself student fetched using this studentId is scoped by college as well as hostel
-  
-  return roomAssignedOrChangedStudentProfile; 
+
+  return roomAssignedOrChangedStudentProfile;
 
 };
 
 const getStudentHomeScreenData = async (accessContext) => {
   //In home screen , Mark attendance button will be shown only when the corressponding hostel's attendance marking time is achieved so checking the current time is equal or more than that and within end time also
   const hostel = await StudentRepository.getHostelOftheStudent(accessContext.loggedInStudentHostelId);
-  if(!hostel) {}
+  if (!hostel) { }
 
   //if current time lies btw attendance marking start and end time then canMarkAttendance is true
   let canMarkAttendance;
-  if(currentTime() >= hostel.attendanceMarkingStartTime && currentTime() <= hostel.attendanceMarkingEndTime) {
+  if (currentTime() >= hostel.attendanceMarkingStartTime && currentTime() <= hostel.attendanceMarkingEndTime) {
     //Now attendance marking window is opened , now check whether student has already marked attendance for today date or not
     const todayMarkedAttendace = await StudentRepository.getTodayMarkedAttendanceOfStudent(accessContext.loggedInStudentProfileId);
-    if(todayMarkedAttendace) { //already attendance marked
+    if (todayMarkedAttendace) { //already attendance marked
       canMarkAttendance = false;
     } else {
       canMarkAttendance = true;
@@ -220,6 +235,38 @@ const getStudentHomeScreenData = async (accessContext) => {
 
 };
 
+const setupNewPassword = async (accessContext, setupNewPasswordRequestBody) => {
+  const {
+    token,
+    newPassword
+  } = setupNewPasswordRequestBody;
+
+  //token validations
+  //checking token exist or not
+  const tokenFromDB = await StudentRepository.isTokenPresent(getHashedVersionOfToken(token));
+
+  if(!tokenFromDB) throw createHttpError(404, "Token not found", {errors: "Token not found in DB"});
+
+  if(new Date() > tokenFromDB.expiresAt) throw createHttpError(422, "Token expired, contact your hostel admin to get activation link again", {errors: "Token expired"});
+
+  if(tokenFromDB.usedAt) throw createHttpError(422, "Token already used, contact hostel admin for account activation if you need", {errors: "Token already used"});
+
+  //token is valid now, so setup the new password to user
+  const user = await StudentRepository.findUserById(tokenFromDB.userId);
+  if(!user) throw createHttpError(404, "User not found", {errors: "User not found"});
+
+  if(user.status !== "PENDING_ACTIVATION") throw createHttpError(422, "User is already "+user.status+" so contact hostel admin", {errors: "Invalid user status for setup new password"});
+
+  const hashedPassword = await getHasedVersionOfPassword(newPassword);
+  //change password of user
+  const passwordUpdatedUser = await StudentRepository.setupNewPasswordToUser(tokenFromDB.userId, hashedPassword);
+
+  //update usedAt column of accountsetuptoken
+  const updatedAccountSetupTokenRecord = await StudentRepository.updatedAccountSetupTokenRecord(tokenFromDB.id);
+
+  return "Password updated successfully, now login with new password";
+};
+
 
 const StudentService = {
   createStudent,
@@ -228,7 +275,8 @@ const StudentService = {
   updateStudentProfile,
   updateStatusOfStudent,
   changeOrAssignStudentRoom,
-  getStudentHomeScreenData
+  getStudentHomeScreenData,
+  setupNewPassword
 };
 
 export default StudentService;

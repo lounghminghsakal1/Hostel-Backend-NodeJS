@@ -44,6 +44,12 @@ const getStudentHomeScreenData = async (req, res) => {
   return Responses.successResponse(res, "Student home screen data fetched successfully", homeScreenData);
 }; 
 
+const setupNewPassword = async (req, res) => {
+  const accessContext = getAccessContext(req);
+  const setupNewPasswordResponse = await StudentService.setupNewPassword(accessContext, req.body);
+  return Responses.successResponse(res, "New password set successfully", setupNewPasswordResponse, 201);
+};
+
 const StudentController = {
   createStudent,
   getAllStudentProfiles,
@@ -51,7 +57,8 @@ const StudentController = {
   updateStudentProfile,
   updateStatusOfStudent,
   changeOrAssignStudentRoom,
-  getStudentHomeScreenData
+  getStudentHomeScreenData,
+  setupNewPassword,
 };
 
 // const getAccessContext = (req) => {

@@ -48,6 +48,7 @@ model User {
 
   role       Role    @relation(fields: [roleId], references: [id])
   college    College @relation(fields: [collegeId], references: [id])
+  accountSetupTokens AccountSetupToken[]
 }
 
 model College {
@@ -207,3 +208,18 @@ model AttendanceRecord {
 
   @@unique([studentId, attendanceDate])
 }
+
+model AccountSetupToken {
+  id Int @id @default(autoincrement())
+  userId Int 
+  tokenHash String @unique
+  expiresAt DateTime
+  usedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
