@@ -6,7 +6,8 @@ export const createStudentProfileRequestBodySchema = z.object({
   contactNumber: z.string().length(10),
   parentMobileNumber: z.string().length(10),
   departmentId: z.int().positive(),
-  studentImageUrl: z.url().optional(),
+  rollNumber: z.string(),
+  studentImageKey: z.string().optional(),
   roomId: z.int().positive().optional()
 });
 

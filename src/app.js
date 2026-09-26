@@ -31,7 +31,7 @@ app.use(`${prefix_api}/rooms`, roomsRouter);
 
 app.use(`${prefix_api}/leave_applications`, leaveApplicationRouter);
 
-app.use(`${prefix_api}/upload`, uploadRouter);
+app.use(`${prefix_api}/uploads`, uploadRouter);  
 
 const __fileName = fileURLToPath(import.meta.url);
 const __dirName = path.dirname(__fileName);

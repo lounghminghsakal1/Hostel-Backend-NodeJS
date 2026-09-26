@@ -1,3 +1,4 @@
+import { getAccessContext } from "../../utils/helper-functions.utils.js";
 import Responses from "../../utils/responses.utils.js";
 import UploadService from "./upload.service.js";
 
@@ -11,9 +12,28 @@ const uploadStudentProfileImage = async (req, res) => {
   return Responses.successResponse(res, "Student profile image updated successfully", uploadedStudentProfileImageURL, 201);
 };
 
+const getPresignedUrlForUploadingAttendanceImage = async (req, res) => {
+  const presignedUploadUrlFromAWSS3 = await UploadService.getPresignedUrlForUploadingAttendanceImage();
+  return Responses.successResponse(res, "Pre signed upload url (use PUT http method) generated successfully", presignedUploadUrlFromAWSS3, 201);
+};
+
+const getPresignedUrlForDownloadingStudentImage = async (req, res) => {
+  const accessContext = getAccessContext(req);
+  const presignedDownloadUrlFromAWSS3 = await UploadService.getPresignedUrlForDownloadingStudentImage(accessContext);
+  return Responses.successResponse(res, "Pre signed download url (use GET http method) generated successfully", presignedDownloadUrlFromAWSS3, 201);
+};
+
+const getPresignedUrlForStudentImageUpload = async (req, res) => {
+  const presignedUploadUrlForStudentImageUpload = await UploadService.getPresignedUrlForStudentImageUpload(req.body);
+  return Responses.successResponse(res, "Pre signed upload url (use PUT http method) generated successfully", presignedUploadUrlForStudentImageUpload, 201);
+};
+
 const UploadController = {
   uploadAttendanceImage,
-  uploadStudentProfileImage
+  uploadStudentProfileImage,
+  getPresignedUrlForUploadingAttendanceImage,
+  getPresignedUrlForDownloadingStudentImage,
+  getPresignedUrlForStudentImageUpload
 };
 
 export default UploadController;

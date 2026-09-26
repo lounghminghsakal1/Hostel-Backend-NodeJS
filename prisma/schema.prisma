@@ -26,14 +26,15 @@ model Role {
 enum UserStatusEnum {
   ACTIVE
   INACTIVE
+  PENDING_ACTIVATION
   SUSPENDED
 }
 
 model User {
   id                 Int            @id @default(autoincrement())
   email              String         @unique
-  passwordHash       String
-  status             UserStatusEnum @default(ACTIVE)
+  passwordHash       String?
+  status             UserStatusEnum @default(PENDING_ACTIVATION)
   mustChangePassword Boolean        @default(false)
 
   roleId Int
@@ -125,7 +126,7 @@ model StudentProfile {
   studentName        String
   contactNumber      String @unique
   parentMobileNumber String
-  studentImageUrl    String?
+  studentImageKey    String?
   rollNumber         String
 
   userId       Int  @unique
@@ -193,7 +194,7 @@ model AttendanceRecord {
   id                    Int         @id @default(autoincrement())
   attendanceDate        DateTime    @db.Date
   reportedTime          DateTime    @default(now())
-  capturedImageUrl      String
+  capturedImageKey      String
   faceMatchingPercentage    Float     
   latitude              Float
   longitude             Float

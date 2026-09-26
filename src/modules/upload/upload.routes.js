@@ -18,4 +18,10 @@ uploadRouter.post("/attendance_image", authenticateUserMiddleware, authorizeUser
 
 uploadRouter.post("/student_image", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), studentProfileImageUploader.single("profile_image"), UploadController.uploadStudentProfileImage);
 
+uploadRouter.get("/attendance_image/upload_url", authenticateUserMiddleware, authorizeUserMiddleware(studentRole), UploadController.getPresignedUrlForUploadingAttendanceImage);
+
+uploadRouter.get("/student_image/upload_url", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), UploadController.getPresignedUrlForStudentImageUpload);
+
+uploadRouter.get("/student_image/download_url", authenticateUserMiddleware, UploadController.getPresignedUrlForDownloadingStudentImage);
+
 export default uploadRouter;

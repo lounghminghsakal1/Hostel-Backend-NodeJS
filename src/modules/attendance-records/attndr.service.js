@@ -2,11 +2,12 @@ import createHttpError from "http-errors";
 import AttendanceRecordRepository from "./attndr.repository.js";
 import { buildMeta, paginationQuerySchema, toPrismaPagination } from "../../utils/pagination.utils.js";
 import { currentDate, currentTime, getDateRange, getDatesListBetween } from "../../utils/dates.utils.js";
+import { getS3SignedUrlByKey } from "../../utils/helper-functions.utils.js";
 //, getDatesListBetween
 
 const markAttendance = async (accessContext, markAttendanceRequestBody) => {
   const {
-    capturedImageUrl,
+    capturedImageKey,
     latitude,
     longitude,
   } = markAttendanceRequestBody;
@@ -28,8 +29,8 @@ const markAttendance = async (accessContext, markAttendanceRequestBody) => {
   let faceMatchingPercentage = 0;
   const student = await AttendanceRecordRepository.findStudentProfileById(accessContext.loggedInStudentProfileId);
 
-  if (!student.studentImageUrl) {
-
+  if (!student.studentImageKey) {
+    throw createHttpError(409, "Student image is not uploaded yet, ask your hostel manager for details", {errors: "Student's image not uploaded"});
   }
 
   //check whether face verfication server(python fast api server is running or not)
@@ -50,8 +51,8 @@ const markAttendance = async (accessContext, markAttendanceRequestBody) => {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      "base_image": student.studentImageUrl,
-      "captured_image": capturedImageUrl,
+      "base_image": await getS3SignedUrlByKey(student.studentImageKey),
+      "captured_image": await getS3SignedUrlByKey(capturedImageKey),
       "threshold": 0.5
     })
   }).then(res => res.json());
@@ -60,7 +61,7 @@ const markAttendance = async (accessContext, markAttendanceRequestBody) => {
 
   console.log(resultOfFaceVerification);
   //creating attendance record in DB
-  const createdAttendanceRecord = await AttendanceRecordRepository.markAttendance(new Date(), capturedImageUrl, faceMatchingPercentage, latitude, longitude, isLocatedWithinHostelRadius, locationDeviationFromHostel, accessContext.loggedInStudentProfileId);
+  const createdAttendanceRecord = await AttendanceRecordRepository.markAttendance(new Date(), capturedImageKey, faceMatchingPercentage, latitude, longitude, isLocatedWithinHostelRadius, locationDeviationFromHostel, accessContext.loggedInStudentProfileId);
 
   return createdAttendanceRecord;
 };

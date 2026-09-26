@@ -3,6 +3,7 @@ import { prisma } from "../../configs/db.js";
 import StudentRepository from "./student.repository.js";
 import bcrypt from "bcrypt";
 import { currentTime } from "../../utils/dates.utils.js";
+import { getS3SignedUrlByKey } from "../../utils/helper-functions.utils.js";
 
 const createStudent = async (studentRequestBody, accessContext) => {
   const {
@@ -11,7 +12,8 @@ const createStudent = async (studentRequestBody, accessContext) => {
     contactNumber,
     parentMobileNumber,
     departmentId,
-    studentImageUrl,
+    rollNumber,
+    studentImageKey,
     roomId
   } = studentRequestBody;
 
@@ -33,9 +35,6 @@ const createStudent = async (studentRequestBody, accessContext) => {
     //get college using hostel id (hostel id got from admin logged in jwt token) - this college id and department.collegeId should match
     const hostel = await StudentRepository.findHostelById(tx, accessContext.loggedInAdminHostelId);
     if (!hostel) throw createHttpError(404, "Hostel not found", { errors: "Invalid hostel id" });
-    console.log(".djfnsj",hostel)
-    console.log("jssfgs r", department)
-    console.log("jfvgfsr", accessContext);
     if ((Number(hostel.collegeId) !== Number(department.collegeId)) || (Number(department.collegeId) !== Number(accessContext.loggedInAdminCollegeId))) throw createHttpError(409, "Invalid department or you cannot create student for this department", { errors: "Invalid request" });
 
     if (roomId) {
@@ -61,7 +60,7 @@ const createStudent = async (studentRequestBody, accessContext) => {
     const createdUser = await StudentRepository.createUser(tx, email, tempPassword, studentRole.id, accessContext.loggedInAdminCollegeId);
 
     //user created now studentprofile has to be created
-    const createdStudentProfile = await StudentRepository.createStudentProfile(tx, studentName, contactNumber, parentMobileNumber, createdUser.id, departmentId, roomId, studentImageUrl, accessContext.loggedInAdminCollegeId, accessContext.loggedInAdminHostelId);
+    const createdStudentProfile = await StudentRepository.createStudentProfile(tx, studentName, contactNumber, parentMobileNumber, createdUser.id, departmentId, rollNumber, roomId, studentImageKey, accessContext.loggedInAdminCollegeId, accessContext.loggedInAdminHostelId);
 
     return {
       createdUser,
@@ -78,7 +77,11 @@ const getAllStudentProfiles = async (accessContext) => {
 const getOneStudentProfileById = async (id, accessContext) => {
   const oneStudent = await StudentRepository.getOneStudentProfileById(id, accessContext.loggedInAdminHostelId, accessContext.loggedInAdminCollegeId);
   if (oneStudent === null) throw createHttpError(404, `Student with id ${id} is not found`, { errors: "Student id not found in the database" });
-  return oneStudent;
+  let studentImageUrl = null;
+  if(oneStudent.studentImageKey) {
+    studentImageUrl = await getS3SignedUrlByKey(oneStudent.studentImageKey, 3600);
+  }
+  return {...oneStudent, studentImageUrl};
 };
 
 const updateStudentProfile = async (id, updateStudentProfileRequestBody, accessContext) => {
@@ -88,7 +91,7 @@ const updateStudentProfile = async (id, updateStudentProfileRequestBody, accessC
     contactNumber,
     parentMobileNumber,
     departmentId,
-    studentImageUrl,
+    studentImageKey,
     roomId
   } = updateStudentProfileRequestBody;
 
@@ -145,7 +148,7 @@ const updateStudentProfile = async (id, updateStudentProfileRequestBody, accessC
     }
 
     //ALL validations are passed so update student profile
-    const updatedStudentProfile = await StudentRepository.updateStudentProfile(tx, studentProfile.id, studentName, contactNumber, parentMobileNumber, departmentId, roomId, studentImageUrl);
+    const updatedStudentProfile = await StudentRepository.updateStudentProfile(tx, studentProfile.id, studentName, contactNumber, parentMobileNumber, departmentId, roomId, studentImageKey);
 
 
     return updatedStudentProfile;

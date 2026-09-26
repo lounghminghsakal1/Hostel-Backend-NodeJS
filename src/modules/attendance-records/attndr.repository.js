@@ -8,11 +8,11 @@ const findHostelById = async (id) => {
   });
 };
 
-const markAttendance = async (currentDate, capturedImageUrl, faceMatchingPercentage, latitude, longitude, isLocatedWithinHostelRadius, locationDeviationFromHostel, loggedInStudentProfileId) => {
+const markAttendance = async (currentDate, capturedImageKey, faceMatchingPercentage, latitude, longitude, isLocatedWithinHostelRadius, locationDeviationFromHostel, loggedInStudentProfileId) => {
   return await prisma.attendanceRecord.create({
     data: {
       attendanceDate: currentDate,
-      capturedImageUrl: capturedImageUrl,
+      capturedImageKey: capturedImageKey,
       faceMatchingPercentage: faceMatchingPercentage,
       latitude: latitude,
       longitude: longitude,
@@ -89,7 +89,7 @@ const getAbsentStudentsRecord = async (hostelId, expectedDates, skip, take) => {
         roomNumber: student.room.roomNumber,
         department: student.department.departmentName,
         parentMobileNumber: student.parentMobileNumber,
-        studentImageUrl: student.studentImageUrl
+        studentImageKey: student.studentImageKey
       });
     }
   }
