@@ -19,6 +19,8 @@ studentRouter.get("/", authenticateUserMiddleware, authorizeUserMiddleware(hoste
 //student flow home screen data
 studentRouter.get("/home", authenticateUserMiddleware, authorizeUserMiddleware(studentRole), StudentController.getStudentHomeScreenData);
 
+studentRouter.get("/departments", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), StudentController.getAllDepartments);
+
 studentRouter.get("/:id", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), StudentController.getOneStudentProfile);
 
 studentRouter.patch("/:id", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware({body: updateStudentProfileRequestBodySchema}) ,StudentController.updateStudentProfile);
@@ -28,6 +30,8 @@ studentRouter.patch("/:id/status", authenticateUserMiddleware, authorizeUserMidd
 
 studentRouter.patch("/:id/room", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware({body: changeOrAssignStudentRoomRequestBodySchema}), StudentController.changeOrAssignStudentRoom);
 
-studentRouter.post("/setup-new-password", authenticateUserMiddleware, authorizeUserMiddleware(studentRole), validateRequestMiddleware({body: setupNewPasswordSchema}), StudentController.setupNewPassword);
+studentRouter.post("/setup-new-password", authenticateUserMiddleware, validateRequestMiddleware({body: setupNewPasswordSchema}), StudentController.setupNewPassword);
+
+
 
 export default studentRouter;

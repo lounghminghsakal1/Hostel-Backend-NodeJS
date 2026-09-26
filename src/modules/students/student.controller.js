@@ -50,6 +50,12 @@ const setupNewPassword = async (req, res) => {
   return Responses.successResponse(res, "New password set successfully", setupNewPasswordResponse, 201);
 };
 
+const getAllDepartments = async (req, res) => {
+  const accessContext = getAccessContext(req);
+  const allDepartments = await StudentService.getAllDepartments(accessContext);
+  return Responses.successResponse(res, "Departments fetched successfully", allDepartments);
+};
+
 const StudentController = {
   createStudent,
   getAllStudentProfiles,
@@ -59,6 +65,7 @@ const StudentController = {
   changeOrAssignStudentRoom,
   getStudentHomeScreenData,
   setupNewPassword,
+  getAllDepartments
 };
 
 // const getAccessContext = (req) => {

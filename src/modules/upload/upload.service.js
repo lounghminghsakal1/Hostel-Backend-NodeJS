@@ -57,7 +57,8 @@ const getPresignedUrlForDownloadingStudentImage = async (accessContext) => {
 };
 
 const getPresignedUrlForStudentImageUpload = async (studentImageUploadGetPresignedURlBody) => {
-  const objectKey = `students/${studentImageUploadGetPresignedURlBody.studentProfileId}.jpg`;
+  const profileId = studentImageUploadGetPresignedURlBody?.studentProfileId ?? crypto.randomUUID();
+  const objectKey = `students/${profileId}.jpg`;
   const command = new PutObjectCommand({
     Bucket: envValues.AWS_S3_BUCKET_NAME,
     Key: objectKey,

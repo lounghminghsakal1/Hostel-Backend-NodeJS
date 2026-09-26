@@ -238,7 +238,8 @@ const setupNewPasswordToUser = async (userId, hashedPassword) => {
       id: userId
     },
     data: {
-      passwordHash: hashedPassword
+      passwordHash: hashedPassword,
+      status: "ACTIVE"
     }
   });
 };
@@ -250,6 +251,14 @@ const updatedAccountSetupTokenRecord = async (id) => {
     },
     data: {
       usedAt: new Date()
+    }
+  });
+};
+
+const getAllDepartments = async (collegeId) => {
+  return await prisma.department.findMany({
+    where: {
+      collegeId: collegeId
     }
   });
 };
@@ -276,7 +285,8 @@ const StudentRepository = {
   createAccountSetupTokenRecord,
   findToken,
   setupNewPasswordToUser,
-  updatedAccountSetupTokenRecord
+  updatedAccountSetupTokenRecord,
+  getAllDepartments,
 };
 
 export default StudentRepository;
