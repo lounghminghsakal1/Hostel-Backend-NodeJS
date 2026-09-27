@@ -28,12 +28,19 @@ const getPresignedUrlForStudentImageUpload = async (req, res) => {
   return Responses.successResponse(res, "Pre signed upload url (use PUT http method) generated successfully", presignedUploadUrlForStudentImageUpload, 201);
 };
 
+const getPresignedDownloadUrlForAttendanceImage = async (req, res) => {
+  const imageKey = req.query.imageKey;
+  const presignedDownloadUrlForAttendanceImage = await UploadService.getPresignedDownloadUrlForAttendanceImage(imageKey);
+  return Responses.successResponse(res, "Presigned download url for attendance image generated successfully", presignedDownloadUrlForAttendanceImage);
+};
+
 const UploadController = {
   uploadAttendanceImage,
   uploadStudentProfileImage,
   getPresignedUrlForUploadingAttendanceImage,
   getPresignedUrlForDownloadingStudentImage,
-  getPresignedUrlForStudentImageUpload
+  getPresignedUrlForStudentImageUpload,
+  getPresignedDownloadUrlForAttendanceImage
 };
 
 export default UploadController;

@@ -3,6 +3,7 @@ import StorageService from "../../infrastructure/storage/index.js";
 import envValues from "../../configs/envFile.js";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import s3Client from "../../configs/s3.js";
+import createHttpError from "http-errors";
 
 const uploadAttendanceImage = async (capturedFile) => {
   const urlFromStorageService = await StorageService.upload(capturedFile);
@@ -16,7 +17,7 @@ const uploadStudentProfileImage = async (profileImageFile) => {
   return {
     "url": urlFromStorageService
   }
-}; 
+};
 
 const getPresignedUrlForUploadingAttendanceImage = async () => {
   const randomId = crypto.randomUUID();
@@ -48,7 +49,7 @@ const getPresignedUrlForDownloadingStudentImage = async (accessContext) => {
     ContentType: "image/jpeg"
   });
 
-  const downloadURL = await getSignedUrl(s3Client, command, {expiresIn: 300});
+  const downloadURL = await getSignedUrl(s3Client, command, { expiresIn: 300 });
 
   return {
     downloadURL,
@@ -65,10 +66,25 @@ const getPresignedUrlForStudentImageUpload = async (studentImageUploadGetPresign
     ContentType: "image/jpeg"
   });
 
-  const presigneduploadURL = await getSignedUrl(s3Client, command, {expiresIn: 300});
+  const presigneduploadURL = await getSignedUrl(s3Client, command, { expiresIn: 300 });
   return {
     uploadURL: presigneduploadURL,
     objectKey
+  };
+};
+
+const getPresignedDownloadUrlForAttendanceImage = async (imageKey) => {
+  if (!imageKey) throw createHttpError(422, "Image key not found", { errors: "Image key needed" });
+  const command = new GetObjectCommand({
+    Bucket: envValues.AWS_S3_BUCKET_NAME,
+    Key: imageKey,
+    ContentType: "image/jpeg"
+  });
+
+  const presignedDownloadUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+  return {
+    downloadUrl: presignedDownloadUrl,
+    objectKey: imageKey
   };
 };
 
@@ -77,7 +93,8 @@ const UploadService = {
   uploadStudentProfileImage,
   getPresignedUrlForUploadingAttendanceImage,
   getPresignedUrlForDownloadingStudentImage,
-  getPresignedUrlForStudentImageUpload
+  getPresignedUrlForStudentImageUpload,
+  getPresignedDownloadUrlForAttendanceImage
 };
 
 export default UploadService;

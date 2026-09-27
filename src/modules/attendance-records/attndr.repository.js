@@ -25,11 +25,27 @@ const markAttendance = async (currentDate, capturedImageKey, faceMatchingPercent
 };
 
 const getAttendanceRecordsPresent = async (attendanceWhere, skip, take) => {
-  return await prisma.attendanceRecord.findMany({
+  const result = await prisma.attendanceRecord.findMany({
     where: attendanceWhere,
+    include: {
+      student: {
+        select: {
+          studentName: true,
+          rollNumber: true,
+          studentImageKey: true,
+          room: {
+            select: {
+              roomNumber: true
+            }
+          }
+        }
+      }
+    },
     skip,
     take
   });
+  console.log(result);
+  return result;
 };
 
 const getTotalCountOfAttendanceRecordPresent = async (attendanceWhere) => {
@@ -47,9 +63,15 @@ const getTotalOfStudentsOfHostel = async (hostelId) => {
 };
 
 const getTotalOfStudentsWithAtleastOnePresentDuringRange = async (attendanceWhere) => {
-  return await prisma.attendanceRecord.count({
-    where: attendanceWhere
+  const students = await prisma.attendanceRecord.findMany({
+    where: attendanceWhere,
+    select: {
+      studentId: true
+    },
+    distinct: ["studentId"]
   });
+
+  return students.length;
 };
 
 const getAbsentStudentsRecord = async (hostelId, expectedDates, skip, take) => {
@@ -59,7 +81,9 @@ const getAbsentStudentsRecord = async (hostelId, expectedDates, skip, take) => {
     },
     include: {
       attendanceRecords: {
-        select: attendanceDate
+        select: {
+          attendanceDate: true
+        }
       },
       department: {
         select: {
@@ -84,12 +108,13 @@ const getAbsentStudentsRecord = async (hostelId, expectedDates, skip, take) => {
     if (thisStudentabsentDates.length > 0) {
       absentStudents.push({
         studentName: student.studentName,
-        rollNumber: student.rollNumber ?? null,
+        rollNumber: student.rollNumber,
         contactNumber: student.contactNumber,
-        roomNumber: student.room.roomNumber,
+        roomNumber: student?.room.roomNumber ?? null,
         department: student.department.departmentName,
         parentMobileNumber: student.parentMobileNumber,
-        studentImageKey: student.studentImageKey
+        studentImageKey: student.studentImageKey,
+        absentDates: thisStudentabsentDates
       });
     }
   }

@@ -138,8 +138,14 @@ const getAttendanceRecords = async (accessContext, attendanceQuery) => {
 
   //attaching hostel scope to attendanceWhere
   const hostelId = accessContext.loggedInAdminHostelId;
-  attendanceWhere.hostelId = hostelId;
+  attendanceWhere = {
+    ...attendanceWhere,
+    student: {
+      hostelId: hostelId
+    }
+  }
 
+  console.log(attendanceWhere);
   //get prisma pagination to query in database
   const prismaPagination = toPrismaPagination(page, pageSize);
 
@@ -149,7 +155,7 @@ const getAttendanceRecords = async (accessContext, attendanceQuery) => {
 
   if (status === "absent") {
     const datesList = getDatesListBetween(startDate, endDate);
-    const { dbRecords, dbTotalCount } = await AttendanceRecordRepository.getAbsentStudentsRecord(hostelId, datesList);
+    const { dbRecords, dbTotalCount } = await AttendanceRecordRepository.getAbsentStudentsRecord(hostelId, datesList, prismaPagination.skip, prismaPagination.take);
     records = dbRecords;
     totalCount = dbTotalCount;
   } else {
@@ -181,7 +187,6 @@ const getAttendanceRecords = async (accessContext, attendanceQuery) => {
     paginationMeta
   };
 };
-
 
 
 const AttendanceRecordService = {
