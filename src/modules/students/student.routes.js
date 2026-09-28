@@ -30,7 +30,7 @@ studentRouter.patch("/:id/status", authenticateUserMiddleware, authorizeUserMidd
 
 studentRouter.patch("/:id/room", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware({body: changeOrAssignStudentRoomRequestBodySchema}), StudentController.changeOrAssignStudentRoom);
 
-studentRouter.post("/setup-new-password", authenticateUserMiddleware, validateRequestMiddleware({body: setupNewPasswordSchema}), StudentController.setupNewPassword);
+studentRouter.post("/setup-new-password", validateRequestMiddleware({body: setupNewPasswordSchema}), StudentController.setupNewPassword);
 
 
 
