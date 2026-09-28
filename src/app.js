@@ -12,6 +12,7 @@ import uploadRouter from "./modules/upload/upload.routes.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import attendanceRecordsRouter from "./modules/attendance-records/attndr.routes.js";
+import upcomingEventsRouter from "./modules/upcoming-events/upcoming-events.routes.js";
 
 const app = express();
 
@@ -40,7 +41,7 @@ app.use("/uploaded-files", express.static(path.join(__dirName, "../uploaded-file
 
 app.use(`${prefix_api}/attendance_records`, attendanceRecordsRouter);
 
-
+app.use(`${prefix_api}/upcoming_events`, upcomingEventsRouter);
 
 app.use(gloabalErrorHandlerMiddleware);
 
