@@ -206,3 +206,7 @@ model AttendanceRecord {
 
   @@unique([studentId, attendanceDate])
 }
+
+
+
+
