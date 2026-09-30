@@ -36,17 +36,17 @@ model User {
   status             UserStatusEnum @default(ACTIVE)
   mustChangePassword Boolean        @default(false)
 
-  roleId Int
+  roleId    Int
   collegeId Int
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  studentProfile     StudentProfile?    
-  hostelAdminProfile HostelAdminProfile? 
+  studentProfile     StudentProfile?
+  hostelAdminProfile HostelAdminProfile?
 
-  role       Role    @relation(fields: [roleId], references: [id])
-  college    College @relation(fields: [collegeId], references: [id])
+  role    Role    @relation(fields: [roleId], references: [id])
+  college College @relation(fields: [collegeId], references: [id])
 }
 
 model College {
@@ -56,10 +56,10 @@ model College {
   contactPersonName String
   contactNumber     String
 
-  hostels     Hostel[]
-  departments Department[]
-  users User[]
-  students StudentProfile[]
+  hostels      Hostel[]
+  departments  Department[]
+  users        User[]
+  students     StudentProfile[]
   hostelAdmins HostelAdminProfile[]
 }
 
@@ -71,9 +71,10 @@ model Hostel {
   longitude         Float
   contactPersonName String
   contactNumber     String
+
   attendanceMarkingStartTime String? @default("20:30")
   attendanceMarkingEndTime   String? @default("22:00")
-  attendanceRadius  Float    @default(800) 
+  attendanceRadius           Float   @default(800)
 
   collegeId Int
 
@@ -83,7 +84,7 @@ model Hostel {
   hostelAdmins HostelAdminProfile[]
   college      College              @relation(fields: [collegeId], references: [id])
   rooms        Room[]
-  students StudentProfile[]
+  students     StudentProfile[]
 
   @@unique([collegeId, hostelName])
 }
@@ -109,7 +110,7 @@ model Room {
   roomNumber String
   capacity   Int
 
-  hostelId        Int
+  hostelId Int
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -121,7 +122,7 @@ model Room {
 }
 
 model StudentProfile {
-  id                 Int  @id   @default(autoincrement())
+  id                 Int    @id @default(autoincrement())
   studentName        String
   contactNumber      String @unique
   parentMobileNumber String
@@ -131,36 +132,36 @@ model StudentProfile {
   userId       Int  @unique
   departmentId Int
   roomId       Int?
-  collegeId Int
-  hostelId Int
+  collegeId    Int
+  hostelId     Int
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id])
+  user       User       @relation(fields: [userId], references: [id])
   department Department @relation(fields: [departmentId], references: [id])
   room       Room?      @relation(fields: [roomId], references: [id])
-  college College @relation(fields: [collegeId], references: [id])
-  hostel Hostel @relation(fields: [hostelId], references: [id])
+  college    College    @relation(fields: [collegeId], references: [id])
+  hostel     Hostel     @relation(fields: [hostelId], references: [id])
+
   leaveApplications LeaveApplication[]
   attendanceRecords AttendanceRecord[]
-
 }
 
 model HostelAdminProfile {
-  id              Int   @id @default(autoincrement())
+  id              Int    @id @default(autoincrement())
   hostelAdminName String
   contactNumber   String @unique
 
-  userId   Int @unique
-  hostelId Int
+  userId    Int @unique
+  hostelId  Int
   collegeId Int
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id])
-  hostel Hostel @relation(fields: [hostelId], references: [id])
+  user    User    @relation(fields: [userId], references: [id])
+  hostel  Hostel  @relation(fields: [hostelId], references: [id])
   college College @relation(fields: [collegeId], references: [id])
 }
 
@@ -168,21 +169,21 @@ enum LeaveApplicationStatusEnum {
   WAITING_FOR_APPROVAL
   APPROVED
   REJECTED
-  CANCELLED //cancelled by student
+  CANCELLED
 }
 
 model LeaveApplication {
-  id Int @id @default(autoincrement())
-  leaveReason String 
-  fromDate DateTime 
-  toDate DateTime
-  status LeaveApplicationStatusEnum @default(WAITING_FOR_APPROVAL)
+  id              Int                        @id @default(autoincrement())
+  leaveReason     String
+  fromDate        DateTime
+  toDate          DateTime
+  status          LeaveApplicationStatusEnum @default(WAITING_FOR_APPROVAL)
   rejectionReason String?
 
-  studentId Int 
+  studentId Int
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   reviewedAt DateTime?
 
@@ -190,23 +191,32 @@ model LeaveApplication {
 }
 
 model AttendanceRecord {
-  id                    Int         @id @default(autoincrement())
-  attendanceDate        DateTime    @db.Date
-  reportedTime          DateTime    @default(now())
-  capturedImageUrl      String
-  faceMatchingPercentage    Float     
-  latitude              Float
-  longitude             Float
+  id                          Int      @id @default(autoincrement())
+  attendanceDate              DateTime @db.Date
+  reportedTime                DateTime @default(now())
+  capturedImageUrl            String
+  faceMatchingPercentage      Float
+  latitude                    Float
+  longitude                   Float
   isLocatedWithinHostelRadius Boolean  @default(false)
-  locationDeviationFromHostel     Float?
-  
+  locationDeviationFromHostel Float?
+
   studentId Int
-      
+
   student StudentProfile @relation(fields: [studentId], references: [id])
 
   @@unique([studentId, attendanceDate])
 }
 
+model Announcement {
+  id               Int      @id @default(autoincrement())
+  priority         Int
+  title            String
+  description      String
+  url              String
+  pushNotification Boolean  @default(false)
+  personalDivision Boolean  @default(false)
 
-
-
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

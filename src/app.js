@@ -12,6 +12,7 @@ import uploadRouter from "./modules/upload/upload.routes.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import attendanceRecordsRouter from "./modules/attendance-records/attndr.routes.js";
+import announcementRouter from "./modules/announcements/announcement.routes.js";
 
 const app = express();
 
@@ -36,13 +37,15 @@ app.use(`${prefix_api}/upload`, uploadRouter);
 const __fileName = fileURLToPath(import.meta.url);
 const __dirName = path.dirname(__fileName);
 
-app.use("/uploaded-files", express.static(path.join(__dirName, "../uploaded-files")));
+app.use(
+  "/uploaded-files",
+  express.static(path.join(__dirName, "../uploaded-files"))
+);
 
 app.use(`${prefix_api}/attendance_records`, attendanceRecordsRouter);
 
-
+app.use(`${prefix_api}/announcements`, announcementRouter);
 
 app.use(gloabalErrorHandlerMiddleware);
-
 
 await startServerAndConnectDB(app);

@@ -1,50 +1,60 @@
 import { prisma } from "../../configs/db.js";
 
 const createAnnouncement = async (announcementData) => {
-  return await prisma.announcement.create({
-    data: announcementData
+  const announcement = await prisma.announcement.create({
+    data: announcementData,
   });
-};
 
-const getAnnouncements = async () => {
-  return await prisma.announcement.findMany({
-    orderBy: {
-      priority: "asc"
-    }
-  });
+  return announcement;
 };
 
 const getAnnouncementById = async (id) => {
-  return await prisma.announcement.findUnique({
+  const announcement = await prisma.announcement.findUnique({
     where: {
-      id
-    }
+      id: Number(id),
+    },
   });
+
+  return announcement;
 };
 
 const updateAnnouncement = async (id, announcementData) => {
-  return await prisma.announcement.update({
+  const announcement = await prisma.announcement.update({
     where: {
-      id
+      id: Number(id),
     },
-    data: announcementData
+    data: announcementData,
   });
+
+  return announcement;
 };
 
 const deleteAnnouncement = async (id) => {
-  return await prisma.announcement.delete({
+  const announcement = await prisma.announcement.delete({
     where: {
-      id
-    }
+      id: Number(id),
+    },
   });
+
+  return announcement;
+};
+
+const getAnnouncements = async () => {
+  const announcements = await prisma.announcement.findMany({
+    orderBy: {
+      priority: "asc",
+    },
+  });
+
+  return announcements;
 };
 
 const AnnouncementRepository = {
   createAnnouncement,
-  getAnnouncements,
   getAnnouncementById,
   updateAnnouncement,
-  deleteAnnouncement
+  deleteAnnouncement,
+  getAnnouncements,
 };
 
 export default AnnouncementRepository;
