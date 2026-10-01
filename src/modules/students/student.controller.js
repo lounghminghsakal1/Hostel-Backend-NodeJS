@@ -45,7 +45,6 @@ const getStudentHomeScreenData = async (req, res) => {
 }; 
 
 const setupNewPassword = async (req, res) => {
-  console.log("kjndfjsrf");
   const accessContext = getAccessContext(req);
   const setupNewPasswordResponse = await StudentService.setupNewPassword(accessContext, req.body);
   return Responses.successResponse(res, "New password set successfully", setupNewPasswordResponse, 201);
