@@ -3,7 +3,7 @@ import authenticateUserMiddleware from "../../middlewares/authentication.middlew
 import authorizeUserMiddleware from "../../middlewares/authorization.middleware.js";
 import StudentController from "./student.controller.js";
 import validateRequestMiddleware from "../../middlewares/validate-request.middleware.js";
-import { changeOrAssignStudentRoomRequestBodySchema, createStudentProfileRequestBodySchema, setupNewPasswordSchema, updateStudentProfileRequestBodySchema, updateStudentStatusRequestBodySchema } from "./student.request-schema.js";
+import { changeOrAssignStudentRoomRequestBodySchema, createStudentProfileRequestBodySchema, sendActivationLinkMailRequestQuerySchema, setupNewPasswordSchema, updateStudentProfileRequestBodySchema, updateStudentStatusRequestBodySchema } from "./student.request-schema.js";
 
 const studentRouter = express.Router();
 
@@ -32,6 +32,7 @@ studentRouter.patch("/:id/room", authenticateUserMiddleware, authorizeUserMiddle
 
 studentRouter.post("/setup-new-password", validateRequestMiddleware({body: setupNewPasswordSchema}), StudentController.setupNewPassword);
 
-
+//activation link automatically will be sent when student profile is created but that link will be expired in 5 mins so if want that activation mail link to be sent again then use this api
+studentRouter.post("/activation-link", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware({query: sendActivationLinkMailRequestQuerySchema}), StudentController.sendActivationLinkMail);
 
 export default studentRouter;

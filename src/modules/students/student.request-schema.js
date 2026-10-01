@@ -26,3 +26,7 @@ export const setupNewPasswordSchema = z.object({
   token: z.string(),
   newPassword: z.string()
 });
+
+export const sendActivationLinkMailRequestQuerySchema = z.object({
+  studentProfileId: z.string()
+});

@@ -148,6 +148,8 @@ model StudentProfile {
   leaveApplications LeaveApplication[]
   attendanceRecords AttendanceRecord[]
 
+  @@unique([hostelId, rollNumber])
+
 }
 
 model HostelAdminProfile {

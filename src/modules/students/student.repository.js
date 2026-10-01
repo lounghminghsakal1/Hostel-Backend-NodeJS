@@ -215,11 +215,17 @@ const getTodayMarkedAttendanceOfStudent = async (studentProfileId) => {
 };
 
 const createAccountSetupTokenRecord = async (tx, userId, tokenHash, expiresAt) => {
-  return await tx.accountSetupToken.create({
+  return tx ? await tx.accountSetupToken.create({
     data: {
       userId: userId,
       tokenHash: tokenHash,
       expiresAt: expiresAt
+    }
+  }) : await prisma.accountSetupToken.create({
+    data: {
+      userId,
+      tokenHash,
+      expiresAt
     }
   });
 };
