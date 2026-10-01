@@ -150,6 +150,8 @@ model StudentProfile {
   attendanceRecords AttendanceRecord[]
   messFeePayments MessFeePayment[]
 
+  @@unique([hostelId, rollNumber])
+
 }
 
 model HostelAdminProfile {

@@ -80,7 +80,7 @@ const createStudent = async (studentRequestBody, accessContext) => {
 
   const activationLink = `ourhostel://setup-password?token=${result.rawToken}`;
   //send email to student containing activation link
-  const emailResponse = await sendEmail(result.createdUser.email, "Account activation for ourhostel.in", "Please click the link to activate your account, the link will be expired in 5 mins", 
+  const emailResponse = await sendEmail(result.createdUser.email, "Account activation for ourhostel.in", "Please click the link to activate your account, the link will be expired in 5 mins",
     `<div>
       <h1>Hoooo activate your account </h1>
       <p>
@@ -249,13 +249,15 @@ const setupNewPassword = async (accessContext, setupNewPasswordRequestBody) => {
     newPassword
   } = setupNewPasswordRequestBody;
 
+  console.log(getHashedVersionOfToken(token));
+
   //token validations
   //checking token exist or not
   const tokenFromDB = await StudentRepository.findToken(getHashedVersionOfToken(token));
 
-  if (!tokenFromDB) throw createHttpError(404, "Token not found", { errors: "Token not found in DB" });
+  if (!tokenFromDB) throw createHttpError(404, "Tokennnn not found", { errors: "Token not found in DB" });
 
-  if (new Date() > tokenFromDB.expiresAt) throw createHttpError(422, "Token expired, contact your hostel admin to get activation link again", { errors: "Token expired" });
+  if (new Date() > tokenFromDB.expiresAt) throw createHttpError(422, "Link expired, contact your hostel admin to get activation link again", { errors: "Token expired" });
 
   if (tokenFromDB.usedAt) throw createHttpError(422, "Token already used, contact hostel admin for account activation if you need", { errors: "Token already used" });
 
@@ -280,6 +282,35 @@ const getAllDepartments = async (accessContext) => {
   return await StudentRepository.getAllDepartments(accessContext.loggedInAdminCollegeId);
 };
 
+const sendActivationLinkMail = async (accessContext, studentProfileId) => {
+  const student = await StudentRepository.findStudentProfileById(studentProfileId);
+  if (!student) throw createHttpError(404, "Student profile not found", { errors: "Invalid student profile id" });
+
+  if (student.hostelId != accessContext.loggedInAdminHostelId) throw createHttpError(403, "The student doesn't belong to your hostel", { errors: "Un authorized access" });
+
+  if (student.user.status !== "PENDING_ACTIVATION") throw createHttpError(409, `Student account is in ${student.user.status} so cannot send activation link, student account status must be at pending verification status`, { errors: "Student account status is not PENDING_VERIFCATION so cannot send activation mail" });
+
+  //can send mail now 
+  const { rawToken, hashedToken } = generateActivationToken();
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+  const accountSetupToken = await StudentRepository.createAccountSetupTokenRecord(null, student.user.id, hashedToken, expiresAt);
+
+  console.log(accountSetupToken);
+  const activationLink = `ourhostel://setup-password?token=${rawToken}`;
+  //send email to student containing activation link
+  const emailResponse = await sendEmail(student.user.email, "Account activation for ourhostel.in", "Please click the link to activate your account, the link will be expired in 5 mins",
+    `<div>
+      <h1>Hoooo activate your account </h1>
+      <p>
+        Click this link to activate and setup new password for your account 
+        This will be expired in 5 mins
+        <a href="${activationLink}">${activationLink}</a>.
+      </p> 
+    </div>`)
+
+  return "Account activation email sent";
+};
 
 const StudentService = {
   createStudent,
@@ -290,7 +321,8 @@ const StudentService = {
   changeOrAssignStudentRoom,
   getStudentHomeScreenData,
   setupNewPassword,
-  getAllDepartments
+  getAllDepartments,
+  sendActivationLinkMail,
 };
 
 export default StudentService;

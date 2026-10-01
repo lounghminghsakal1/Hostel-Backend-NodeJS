@@ -45,6 +45,7 @@ const getStudentHomeScreenData = async (req, res) => {
 }; 
 
 const setupNewPassword = async (req, res) => {
+  console.log("kjndfjsrf");
   const accessContext = getAccessContext(req);
   const setupNewPasswordResponse = await StudentService.setupNewPassword(accessContext, req.body);
   return Responses.successResponse(res, "New password set successfully", setupNewPasswordResponse, 201);
@@ -56,6 +57,13 @@ const getAllDepartments = async (req, res) => {
   return Responses.successResponse(res, "Departments fetched successfully", allDepartments);
 };
 
+const sendActivationLinkMail = async (req, res) => {
+  const accessContext = getAccessContext(req);
+  const studentProfileId = Number(req.query.studentProfileId);
+  const activationMailSentResponse = await StudentService.sendActivationLinkMail(accessContext, studentProfileId);
+  return Responses.successResponse(res, "Account activation mail sent successfully", activationMailSentResponse);
+};
+
 const StudentController = {
   createStudent,
   getAllStudentProfiles,
@@ -65,7 +73,8 @@ const StudentController = {
   changeOrAssignStudentRoom,
   getStudentHomeScreenData,
   setupNewPassword,
-  getAllDepartments
+  getAllDepartments,
+  sendActivationLinkMail,
 };
 
 // const getAccessContext = (req) => {
