@@ -30,9 +30,9 @@ studentRouter.patch("/:id/status", authenticateUserMiddleware, authorizeUserMidd
 
 studentRouter.patch("/:id/room", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware({body: changeOrAssignStudentRoomRequestBodySchema}), StudentController.changeOrAssignStudentRoom);
 
-studentRouter.post("/setup-new-password", validateRequestMiddleware({body: setupNewPasswordSchema}), StudentController.setupNewPassword);
+studentRouter.post("/setup_new_password", validateRequestMiddleware({body: setupNewPasswordSchema}), StudentController.setupNewPassword);
 
 //activation link automatically will be sent when student profile is created but that link will be expired in 5 mins so if want that activation mail link to be sent again then use this api
-studentRouter.post("/activation-link", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware({query: sendActivationLinkMailRequestQuerySchema}), StudentController.sendActivationLinkMail);
+studentRouter.post("/activation_link", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware({query: sendActivationLinkMailRequestQuerySchema}), StudentController.sendActivationLinkMail);
 
 export default studentRouter;

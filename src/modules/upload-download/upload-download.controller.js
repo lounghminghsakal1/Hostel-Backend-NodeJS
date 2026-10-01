@@ -1,6 +1,6 @@
 import { getAccessContext } from "../../utils/helper-functions.utils.js";
 import Responses from "../../utils/responses.utils.js";
-import UploadService from "./upload.service.js";
+import UploadService from "./upload-download.service.js";
 
 const uploadAttendanceImage = async (req, res) => {
   const uploadedAttendanceImageUrl = await UploadService.uploadAttendanceImage(req.file);

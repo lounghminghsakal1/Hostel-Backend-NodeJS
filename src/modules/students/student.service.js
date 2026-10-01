@@ -249,8 +249,6 @@ const setupNewPassword = async (accessContext, setupNewPasswordRequestBody) => {
     newPassword
   } = setupNewPasswordRequestBody;
 
-  console.log(getHashedVersionOfToken(token));
-
   //token validations
   //checking token exist or not
   const tokenFromDB = await StudentRepository.findToken(getHashedVersionOfToken(token));
@@ -294,9 +292,8 @@ const sendActivationLinkMail = async (accessContext, studentProfileId) => {
   const { rawToken, hashedToken } = generateActivationToken();
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-  const accountSetupToken = await StudentRepository.createAccountSetupTokenRecord(null, student.user.id, hashedToken, expiresAt);
+  await StudentRepository.createAccountSetupTokenRecord(null, student.user.id, hashedToken, expiresAt);
 
-  console.log(accountSetupToken);
   const activationLink = `ourhostel://setup-password?token=${rawToken}`;
   //send email to student containing activation link
   const emailResponse = await sendEmail(student.user.email, "Account activation for ourhostel.in", "Please click the link to activate your account, the link will be expired in 5 mins",

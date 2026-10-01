@@ -8,7 +8,7 @@ import studentRouter from "./modules/students/student.routes.js";
 import hostelRouter from "./modules/hostels/hostel.routes.js";
 import roomsRouter from "./modules/rooms/room.routes.js";
 import leaveApplicationRouter from "./modules/leave-applications/leave-appln.routes.js";
-import uploadRouter from "./modules/upload/upload.routes.js";
+import UploadDownloadRouter from "./modules/upload-download/upload-download.routes.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import attendanceRecordsRouter from "./modules/attendance-records/attndr.routes.js";
@@ -32,7 +32,7 @@ app.use(`${prefix_api}/rooms`, roomsRouter);
 
 app.use(`${prefix_api}/leave_applications`, leaveApplicationRouter);
 
-app.use(`${prefix_api}/uploads`, uploadRouter);  
+app.use(`${prefix_api}/media`, UploadDownloadRouter);  
 
 const __fileName = fileURLToPath(import.meta.url);
 const __dirName = path.dirname(__fileName);
