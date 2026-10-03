@@ -6,7 +6,7 @@ const createRoom = async (accessContext, roomNumber, capacity) => {
   const existingRoomWithThisRoomNumber = await RoomsRepository.findRoomByRoomNumberWithinHostel(accessContext.loggedAdminHostelId, accessContext.loggedInAdminCollegeId, roomNumber);
   if (existingRoomWithThisRoomNumber) throw createHttpError(409, "Room number already exists in your hostel", { errors: "Invalid room number" });
 
-  const createdRoom = await RoomsRepository.createRoom(accessContext.loggedAdminHostelId, roomNumber, capacity);
+  const createdRoom = await RoomsRepository.createRoom(accessContext.loggedInAdminHostelId, roomNumber, capacity);
   return createdRoom;
 };
 

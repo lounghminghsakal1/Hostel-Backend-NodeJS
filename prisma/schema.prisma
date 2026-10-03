@@ -262,12 +262,19 @@ enum MonthEnum {
   DECEMBER
 }
 
+enum MonthlyMessBillStatusEnum {
+  DRAFT
+  PUBLISHED
+  EXPIRED
+}
+
 model MonthlyMessBill {
   id Int @id @default(autoincrement())
   month MonthEnum
   year Int
   amount Decimal @db.Decimal(10,2)
   lastDate DateTime
+  status MonthlyMessBillStatusEnum @default(DRAFT)
 
   hostelId Int
 
@@ -276,6 +283,8 @@ model MonthlyMessBill {
 
   hostel Hostel @relation(fields: [hostelId], references: [id])
 
+  messFeePayments MessFeePayment[]
+  
   @@unique([month, year, hostelId])
 }
 
