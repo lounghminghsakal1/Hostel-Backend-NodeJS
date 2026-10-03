@@ -24,9 +24,14 @@ export const changeOrAssignStudentRoomRequestBodySchema = z.object({
 
 export const setupNewPasswordSchema = z.object({
   token: z.string(),
-  newPassword: z.string()
+  newPassword: z.string(),
+  forgotPassword: z.boolean().optional(),
 });
 
 export const sendActivationLinkMailRequestQuerySchema = z.object({
   studentProfileId: z.string()
+});
+
+export const forgotPasswordRequestBodySchema = z.object({
+  email: z.email()
 });

@@ -36,7 +36,6 @@ const getPresignedDownloadUrlForAttendanceImage = async (req, res) => {
 
 const getPreSignedUploadUrl = async (req, res) => {
   const imageFor = req.query.media_for;
-  console.log(req.query);
   const preSignedUploadUrl = await UploadDownloadService.getPresignedUploadUrl(imageFor);
   return Responses.successResponse(res, "Presigned upload url generated successfully", preSignedUploadUrl);
 };
