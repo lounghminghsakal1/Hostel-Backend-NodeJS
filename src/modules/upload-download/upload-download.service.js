@@ -88,13 +88,32 @@ const getPresignedDownloadUrlForAttendanceImage = async (imageKey) => {
   };
 };
 
-const UploadService = {
+const getPresignedUploadUrl = async (imageFor) => {
+  const objectKey = `${imageFor}/${crypto.randomUUID()}`;
+
+  console.log(objectKey);
+  const command = new PutObjectCommand({
+    Bucket: envValues.AWS_S3_BUCKET_NAME,
+    Key: objectKey,
+    ContentType: "image/jpeg"
+  });
+
+  const presignedUploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
+  console.log(presignedUploadUrl);
+  return {
+    uploadURL: presignedUploadUrl,
+    objectKey
+  };
+};
+
+const UploadDownloadService = {
   uploadAttendanceImage,
   uploadStudentProfileImage,
   getPresignedUrlForUploadingAttendanceImage,
   getPresignedUrlForDownloadingStudentImage,
   getPresignedUrlForStudentImageUpload,
-  getPresignedDownloadUrlForAttendanceImage
+  getPresignedDownloadUrlForAttendanceImage,
+  getPresignedUploadUrl
 };
 
-export default UploadService;
+export default UploadDownloadService;
