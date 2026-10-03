@@ -14,7 +14,7 @@ export const createStudentProfileRequestBodySchema = z.object({
 export const updateStudentProfileRequestBodySchema = createStudentProfileRequestBodySchema.partial();
 
 export const updateStudentStatusRequestBodySchema = z.object({
-  status: z.enum(["ACTIVE", "INACTIVE", "SUSPENDED"])
+  status: z.enum(["INACTIVE", "SUSPENDED"])
 });
 
 export const changeOrAssignStudentRoomRequestBodySchema = z.object({
@@ -24,9 +24,14 @@ export const changeOrAssignStudentRoomRequestBodySchema = z.object({
 
 export const setupNewPasswordSchema = z.object({
   token: z.string(),
-  newPassword: z.string()
+  newPassword: z.string(),
+  forgotPassword: z.boolean().optional(),
 });
 
 export const sendActivationLinkMailRequestQuerySchema = z.object({
   studentProfileId: z.string()
+});
+
+export const forgotPasswordRequestBodySchema = z.object({
+  email: z.email()
 });
