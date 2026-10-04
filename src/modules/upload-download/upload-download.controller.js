@@ -40,6 +40,14 @@ const getPreSignedUploadUrl = async (req, res) => {
   return Responses.successResponse(res, "Presigned upload url generated successfully", preSignedUploadUrl);
 };
 
+const getPreSignedDownloadUrl = async (req, res) => {
+  const imageKey = req.query.image_key;
+  const preSignedDownlaodUrl = await UploadDownloadService.getPreSignedDownloadUrl(imageKey);
+  return Responses.successResponse(res, "Presigned download url generated successfully", preSignedDownlaodUrl);
+};
+
+
+
 const UploadDownloadController = {
   uploadAttendanceImage,
   uploadStudentProfileImage,
@@ -47,7 +55,8 @@ const UploadDownloadController = {
   getPresignedUrlForDownloadingStudentImage,
   getPresignedUrlForStudentImageUpload,
   getPresignedDownloadUrlForAttendanceImage,
-  getPreSignedUploadUrl
+  getPreSignedUploadUrl,
+  getPreSignedDownloadUrl
 };
 
 export default UploadDownloadController;

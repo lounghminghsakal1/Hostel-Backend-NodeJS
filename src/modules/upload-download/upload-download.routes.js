@@ -17,7 +17,11 @@ const getAttendanceImageDownloadUrlRequestQuerySchema = z.object({
 });
 
 const getUploadUrlRequestQuerySchema = z.object({
-  media_for: z.string()
+  media_for: z.enum(["attendance_image", "student_image", "event_image"])
+});
+
+const getDownloadUrlRequestQuerySchema = z.object({
+  image_key: z.string()
 });
 
 const attendanceImageUploader = createFileUploader("attendance-images");
@@ -36,6 +40,8 @@ UploadDownloadRouter.get("/student_image/download_url", authenticateUserMiddlewa
 
 UploadDownloadRouter.get("/attendance_image/download_url", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware({query: getAttendanceImageDownloadUrlRequestQuerySchema}), UploadDownloadController.getPresignedDownloadUrlForAttendanceImage);
 
-UploadDownloadRouter.get("/upload_url", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware({query: getUploadUrlRequestQuerySchema}), UploadDownloadController.getPreSignedUploadUrl);
+UploadDownloadRouter.get("/upload_url", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole, studentRole), validateRequestMiddleware({query: getUploadUrlRequestQuerySchema}), UploadDownloadController.getPreSignedUploadUrl);
+
+UploadDownloadRouter.get("/download_url", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole, studentRole), validateRequestMiddleware({query: getDownloadUrlRequestQuerySchema}), UploadDownloadController.getPreSignedDownloadUrl);
 
 export default UploadDownloadRouter;
