@@ -39,13 +39,27 @@ const cancelLeaveApplication = async (req, res) => {
   return Responses.successResponse(res, "Leave application cancelled successfully", cancelledLeaveApplication);
 };
 
+const getOneStudentLeaveApplications = async (req, res) => {
+  const accessContext = getAccessContext(req);
+  const leaveApplicationsOfOneStudent = await LeaveApplicationService.getOneStudentLeaveApplications(accessContext);
+  return Responses.successResponse(res, "Student's leave applications fetched successfully", leaveApplicationsOfOneStudent);
+};
+
+const getOneStudentOneLeaveApplication = async (req, res) => {
+  const accessContext = getAccessContext(req);
+  const oneLeaveApplicationOfStudent = await LeaveApplicationService.getOneStudentOneLeaveApplication(accessContext, Number(req.params.id));
+  return Responses.successResponse(res, "Student's requested leave application sent successfully", oneLeaveApplicationOfStudent);
+};
+
 const LeaveApplicationController = {
   createLeaveApplication,
   updateLeaveApplication,
   getAllLeaveApplications,
   getOneLeaveApplication,
   reviewLeaveApplication,
-  cancelLeaveApplication
+  cancelLeaveApplication,
+  getOneStudentLeaveApplications,
+  getOneStudentOneLeaveApplication,
 };
 
 export default LeaveApplicationController;

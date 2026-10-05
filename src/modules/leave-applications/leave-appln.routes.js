@@ -22,5 +22,9 @@ leaveApplicationRouter.patch("/:id/review", authenticateUserMiddleware, authoriz
 
 leaveApplicationRouter.patch("/:id/cancel", authenticateUserMiddleware, authorizeUserMiddleware(studentRole), LeaveApplicationController.cancelLeaveApplication);
 
+leaveApplicationRouter.get("/student/my_leave_applications", authenticateUserMiddleware, authorizeUserMiddleware(studentRole), LeaveApplicationController.getOneStudentLeaveApplications);
+
+leaveApplicationRouter.get("/student/my_leave_applications/:id", authenticateUserMiddleware, authorizeUserMiddleware(studentRole), LeaveApplicationController.getOneStudentOneLeaveApplication);
+
 export default leaveApplicationRouter;
 
