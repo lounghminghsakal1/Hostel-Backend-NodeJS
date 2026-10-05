@@ -14,7 +14,6 @@ const validateHostelAdminAccessScope = (model) => {
 
     if (!modelRecord) throw createHttpError(404, `${model} not found with id as ${modelRecordId}`, { errors: "Invalid id" });
 
-    console.log(modelRecord);
     if(!modelRecord.hostelId) {
       throw createHttpError(500, `The model ${model} has no hostelId column`, {errors: "Internal server error"});
     }

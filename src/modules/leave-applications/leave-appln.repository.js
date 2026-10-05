@@ -105,6 +105,23 @@ const cancelLeaveApplication = async (leaveApplicationId, studentId) => {
   });
 };
 
+const getOneStudentLeaveApplications = async (studentProfileId) => {
+  return await prisma.leaveApplication.findMany({
+    where: {
+      studentId: studentProfileId
+    }
+  });
+};
+
+const getOneStudentOneLeaveApplication = async (studentProfileId, leaveApplicationId) => {
+  return await prisma.leaveApplication.findFirst({
+    where: {
+      id: leaveApplicationId,
+      studentId: studentProfileId
+    }
+  });
+};
+
 const LeaveApplicationRepository = {
   findLeaveApplicationOdStudentByStudentIdWithStatusAsWaiting,
   findLeaveApplicationOfStudentWithOverLappingTimePeriodAndApproved,
@@ -115,6 +132,8 @@ const LeaveApplicationRepository = {
   getOneLeaveApplication,
   reviewLeaveApplication,
   cancelLeaveApplication,
+  getOneStudentLeaveApplications,
+  getOneStudentOneLeaveApplication,
 };
 
 export default LeaveApplicationRepository;

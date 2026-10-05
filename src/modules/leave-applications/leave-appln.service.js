@@ -74,6 +74,16 @@ const cancelLeaveApplication = async (accessContext, leaveApplicationId) => {
   return cancelledLeaveApplication;
 };
 
+const getOneStudentLeaveApplications = async (accessContext) => {
+  return await LeaveApplicationRepository.getOneStudentLeaveApplications(accessContext.loggedInStudentProfileId);
+};
+
+const getOneStudentOneLeaveApplication = async (accessContext, leaveApplicationId) => {
+  const leaveApplication = await LeaveApplicationRepository.getOneStudentOneLeaveApplication(accessContext.loggedInStudentProfileId, leaveApplicationId);
+   if(!leaveApplication) throw createHttpError(404, `Leave application with ${leaveApplicationId} not found`, {errors: "Invalid id"});
+    return leaveApplication;
+};
+
 const LeaveApplicationService = {
   createLeaveApplication,
   updateLeaveApplication,
@@ -81,6 +91,8 @@ const LeaveApplicationService = {
   getOneLeaveApplication,
   reviewLeaveApplication,
   cancelLeaveApplication,
+  getOneStudentLeaveApplications,
+  getOneStudentOneLeaveApplication,
 };
 
 export default LeaveApplicationService;

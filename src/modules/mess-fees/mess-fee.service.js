@@ -53,7 +53,6 @@ const deleteMonthlyMessBill = async (id, monthlyMessBill) => {
 };
 
 const getMonthlyMessBills = async (accessContext) => {
-  console.log("ljsrngjerng");
   return await MessFeeRepository.getMonthlyMessBills(accessContext.loggedInAdminHostelId);
 };
 

@@ -145,7 +145,6 @@ const getAttendanceRecords = async (accessContext, attendanceQuery) => {
     }
   }
 
-  console.log(attendanceWhere);
   //get prisma pagination to query in database
   const prismaPagination = toPrismaPagination(page, pageSize);
 
