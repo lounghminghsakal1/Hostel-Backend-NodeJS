@@ -1,0 +1,1120 @@
+# OurHostel - Simple Frontend API Guide
+
+**Base URL:** `https://api.ourhostel.in/api/v1`
+
+Add the endpoint path to the base URL. Example: `https://api.ourhostel.in/api/v1/auth/login`.
+
+Send JSON bodies with `Content-Type: application/json`. For protected APIs, send `Authorization: Bearer <token>`, using the token returned by login.
+
+`{id}` means the ID of that resource. Student IDs here are student profile IDs. Examples use sample values and describe the current project code.
+
+## 1. POST /auth/login
+
+**Endpoint:** `POST /auth/login` (Public)
+
+**What it does:** Sign in with an email and password. Returns a login token and basic user details.
+
+**Available query parameters:**
+
+None.
+
+**Request payload:**
+
+```json
+{
+  "email": "arun@example.com",
+  "password": "ExamplePassword123!"
+}
+```
+
+Both fields are required.
+
+**Response structure (HTTP 200):**
+
+```json
+{
+  "status": "success",
+  "message": "Logged in successful",
+  "data": {
+    "user": {
+      "id": 25,
+      "email": "arun@example.com",
+      "status": "ACTIVE",
+      "role": "STUDENT"
+    },
+    "token": "<JWT_ACCESS_TOKEN>"
+  },
+  "errors": null
+}
+```
+
+## 2. POST /students/setup_new_password
+
+**Endpoint:** `POST /students/setup_new_password` (Public)
+
+**What it does:** Set the first password using the token from the emailed setup link. Then log in with the new password.
+
+**Available query parameters:**
+
+None.
+
+**Request payload:**
+
+```json
+{
+  "token": "<RAW_TOKEN_FROM_EMAIL_LINK>",
+  "newPassword": "ExamplePassword123!"
+}
+```
+
+Both fields are required. Use the raw token from the emailed link; it expires after 5 minutes.
+
+**Response structure (HTTP 201):**
+
+```json
+{
+  "status": "success",
+  "message": "New password set successfully",
+  "data": "Password updated successfully, now login with new password",
+  "errors": null
+}
+```
+
+## 3. GET /students/home
+
+**Endpoint:** `GET /students/home` (STUDENT)
+
+**What it does:** Get the attendance button flag and announcements for the signed-in student.
+
+**Available query parameters:**
+
+None.
+
+**Request payload:**
+
+None.
+
+**Response structure (HTTP 200):**
+
+```json
+{
+  "status": "success",
+  "message": "Student home screen data fetched successfully",
+  "data": {
+    "canMarkAttendance": true,
+    "announcementsData": []
+  },
+  "errors": null
+}
+```
+
+## 4. POST /attendance_records
+
+**Endpoint:** `POST /attendance_records` (STUDENT)
+
+**What it does:** Mark attendance for the signed-in student using an uploaded photo key and location.
+
+**Available query parameters:**
+
+None.
+
+**Request payload:**
+
+```json
+{
+  "capturedImageKey": "attendance/captures/example.jpg",
+  "latitude": 13.0827,
+  "longitude": 80.2707
+}
+```
+
+All fields are required. Latitude and longitude must be numbers. Upload the photo first, then send its object key.
+
+**Response structure (HTTP 201):**
+
+```json
+{
+  "status": "success",
+  "message": "Attendance marked as present successfully",
+  "data": {
+    "id": 101,
+    "attendanceDate": "2026-10-10T00:00:00.000Z",
+    "reportedTime": "2026-10-10T15:15:00.000Z",
+    "capturedImageKey": "attendance/captures/example.jpg",
+    "faceMatchingPercentage": 96.4,
+    "latitude": 13.0827,
+    "longitude": 80.2707,
+    "isLocatedWithinHostelRadius": true,
+    "locationDeviationFromHostel": 42.6,
+    "studentId": 12
+  },
+  "errors": null
+}
+```
+
+## 5. GET /attendance_records
+
+**Endpoint:** `GET /attendance_records` (HOSTEL_ADMIN)
+
+**What it does:** Get attendance records and summary counts for the admin's hostel.
+
+**Available query parameters:**
+
+| Parameter | Example / default | Meaning |
+| --- | --- | --- |
+| page | 1 (default) | Page number, minimum 1. |
+| pageSize | 10 (default) | Results per page, from 1 to 100. |
+| date | 2026-10-10 | One date, in YYYY-MM-DD format. Defaults to today if no date filters are sent. |
+| fromDate | 2026-10-01 | Start of date range; requires toDate. |
+| toDate | 2026-10-10 | End of date range; requires fromDate. |
+| status | present (default) or absent | Type of attendance results. |
+
+Use date OR fromDate + toDate. Do not combine both.
+
+Example: `/attendance_records?date=2026-10-10&status=present&page=1&pageSize=10`.
+
+**Request payload:**
+
+None.
+
+**Response structure (HTTP 200):**
+
+```json
+{
+  "status": "success",
+  "message": "Attendance records fetched successfully",
+  "data": {
+    "summary": {
+      "totalStudentsOfTheHostel": 100,
+      "totalStudentsWithatleastOnePresentDuringDateFilter": 92,
+      "completelyAbsentStudentsCountDuringDates": 8
+    },
+    "attendanceRecords": [
+      {
+        "id": 101,
+        "attendanceDate": "2026-10-10T00:00:00.000Z",
+        "reportedTime": "2026-10-10T15:15:00.000Z",
+        "capturedImageKey": "attendance/captures/example.jpg",
+        "faceMatchingPercentage": 96.4,
+        "latitude": 13.0827,
+        "longitude": 80.2707,
+        "isLocatedWithinHostelRadius": true,
+        "locationDeviationFromHostel": 42.6,
+        "studentId": 12,
+        "student": {
+          "studentName": "Arun Kumar",
+          "rollNumber": "CSE2026001",
+          "studentImageKey": "students/12.jpg",
+          "room": {
+            "roomNumber": "A-101"
+          }
+        }
+      }
+    ]
+  },
+  "meta": {
+    "page": 1,
+    "pageSize": 10,
+    "totalPages": 10
+  }
+}
+```
+
+With `status=absent`, the response becomes:
+
+```json
+{
+  "status": "success",
+  "message": "Attendance records fetched successfully",
+  "data": {
+    "summary": {
+      "totalStudentsOfTheHostel": 100,
+      "totalStudentsWithatleastOnePresentDuringDateFilter": 92,
+      "completelyAbsentStudentsCountDuringDates": 8
+    },
+    "attendanceRecords": [
+      {
+        "studentName": "Arun Kumar",
+        "rollNumber": "CSE2026001",
+        "contactNumber": "9876543210",
+        "roomNumber": "A-101",
+        "department": "Computer Science",
+        "parentMobileNumber": "9876543211",
+        "studentImageKey": "students/12.jpg",
+        "absentDates": [
+          "2026-10-10"
+        ]
+      }
+    ]
+  },
+  "meta": {
+    "page": 1,
+    "pageSize": 10,
+    "totalPages": 1
+  }
+}
+```
+
+For a date range, the absent list includes students who missed at least one date. The summary's completely absent count means students who missed every date. `meta` gives page, pageSize, and totalPages.
+
+## 6. POST /students
+
+**Endpoint:** `POST /students` (HOSTEL_ADMIN)
+
+**What it does:** Create a student account and profile. The student receives an emailed password setup link.
+
+**Available query parameters:**
+
+None.
+
+**Request payload:**
+
+```json
+{
+  "email": "arun@example.com",
+  "studentName": "Arun Kumar",
+  "contactNumber": "9876543210",
+  "parentMobileNumber": "9876543211",
+  "departmentId": 3,
+  "rollNumber": "CSE2026001",
+  "studentImageKey": "students/12.jpg",
+  "roomId": 7
+}
+```
+
+Required: email, studentName, contactNumber, parentMobileNumber, departmentId, rollNumber. Optional: studentImageKey, roomId. Phone strings must have 10 characters; IDs must be positive integers.
+
+**Response structure (HTTP 201):**
+
+```json
+{
+  "status": "success",
+  "message": "Student created successfully",
+  "data": {
+    "id": 12,
+    "studentName": "Arun Kumar",
+    "contactNumber": "9876543210",
+    "parentMobileNumber": "9876543211",
+    "studentImageKey": "students/12.jpg",
+    "rollNumber": "CSE2026001",
+    "userId": 25,
+    "departmentId": 3,
+    "roomId": 7,
+    "collegeId": 1,
+    "hostelId": 2,
+    "createdAt": "2026-10-10T10:00:00.000Z",
+    "updatedAt": "2026-10-10T10:00:00.000Z"
+  },
+  "errors": null
+}
+```
+
+## 7. GET /students
+
+**Endpoint:** `GET /students` (HOSTEL_ADMIN)
+
+**What it does:** Get all student profiles in the admin's hostel.
+
+**Available query parameters:**
+
+None.
+
+**Request payload:**
+
+None.
+
+**Response structure (HTTP 200):**
+
+```json
+{
+  "status": "success",
+  "message": "All student profiles fetched successfully",
+  "data": [
+    {
+      "id": 12,
+      "studentName": "Arun Kumar",
+      "contactNumber": "9876543210",
+      "parentMobileNumber": "9876543211",
+      "studentImageKey": "students/12.jpg",
+      "rollNumber": "CSE2026001",
+      "userId": 25,
+      "departmentId": 3,
+      "roomId": 7,
+      "collegeId": 1,
+      "hostelId": 2,
+      "createdAt": "2026-10-10T10:00:00.000Z",
+      "updatedAt": "2026-10-10T10:00:00.000Z"
+    }
+  ],
+  "errors": null
+}
+```
+
+## 8. GET /students/{id}
+
+**Endpoint:** `GET /students/{id}` (HOSTEL_ADMIN)
+
+**What it does:** Get one student profile and a temporary profile image URL.
+
+**Available query parameters:**
+
+None.
+
+**Request payload:**
+
+None.
+
+**Response structure (HTTP 200):**
+
+```json
+{
+  "status": "success",
+  "message": "Student fetched successfully",
+  "data": {
+    "id": 12,
+    "studentName": "Arun Kumar",
+    "contactNumber": "9876543210",
+    "parentMobileNumber": "9876543211",
+    "studentImageKey": "students/12.jpg",
+    "rollNumber": "CSE2026001",
+    "userId": 25,
+    "departmentId": 3,
+    "roomId": 7,
+    "collegeId": 1,
+    "hostelId": 2,
+    "createdAt": "2026-10-10T10:00:00.000Z",
+    "updatedAt": "2026-10-10T10:00:00.000Z",
+    "studentImageUrl": "https://example-bucket.s3.amazonaws.com/students/12.jpg?<SIGNED_QUERY>"
+  },
+  "errors": null
+}
+```
+
+## 9. PATCH /students/{id}
+
+**Endpoint:** `PATCH /students/{id}` (HOSTEL_ADMIN)
+
+**What it does:** Update an active student's details. Send only fields you want to change.
+
+**Available query parameters:**
+
+None.
+
+**Request payload:**
+
+```json
+{
+  "studentName": "Arun K",
+  "parentMobileNumber": "9876543213",
+  "departmentId": 3,
+  "roomId": 7
+}
+```
+
+All student-create fields are optional. Omit unchanged fields. The backend currently ignores rollNumber updates. Null is not accepted.
+
+**Response structure (HTTP 200):**
+
+```json
+{
+  "status": "success",
+  "message": "Student updated successfully",
+  "data": {
+    "id": 12,
+    "studentName": "Arun K",
+    "contactNumber": "9876543210",
+    "parentMobileNumber": "9876543213",
+    "studentImageKey": "students/12.jpg",
+    "rollNumber": "CSE2026001",
+    "userId": 25,
+    "departmentId": 3,
+    "roomId": 7,
+    "collegeId": 1,
+    "hostelId": 2,
+    "createdAt": "2026-10-10T10:00:00.000Z",
+    "updatedAt": "2026-10-10T10:00:00.000Z"
+  },
+  "errors": null
+}
+```
+
+## 10. GET /students/departments
+
+**Endpoint:** `GET /students/departments` (HOSTEL_ADMIN)
+
+**What it does:** Get departments for the admin's college.
+
+**Available query parameters:**
+
+None.
+
+**Request payload:**
+
+None.
+
+**Response structure (HTTP 200):**
+
+```json
+{
+  "status": "success",
+  "message": "Departments fetched successfully",
+  "data": [
+    {
+      "id": 3,
+      "departmentName": "Computer Science",
+      "hodName": "Dr. Meena",
+      "contactPersonName": "Priya",
+      "contactNumber": "9876543214",
+      "collegeId": 1
+    }
+  ],
+  "errors": null
+}
+```
+
+## 11. POST /rooms
+
+**Endpoint:** `POST /rooms` (HOSTEL_ADMIN)
+
+**What it does:** Create a room with a room number and capacity. The current backend has a hostel ID issue that can prevent this request from succeeding.
+
+**Available query parameters:**
+
+None.
+
+**Request payload:**
+
+```json
+{
+  "roomNumber": "A-101",
+  "capacity": 4
+}
+```
+
+Both fields are required. Capacity must be a positive integer.
+
+**Response structure (HTTP 201):**
+
+```json
+{
+  "status": "success",
+  "message": "Room created successfully",
+  "data": {
+    "id": 7,
+    "roomNumber": "A-101",
+    "capacity": 4,
+    "hostelId": 2,
+    "createdAt": "2026-10-10T10:00:00.000Z",
+    "updatedAt": "2026-10-10T10:00:00.000Z"
+  },
+  "errors": null
+}
+```
+
+## 12. GET /rooms
+
+**Endpoint:** `GET /rooms` (HOSTEL_ADMIN)
+
+**What it does:** Get rooms with their capacity, occupied beds, and remaining beds. The current backend has a hostel filtering issue.
+
+**Available query parameters:**
+
+| Parameter | Current behavior |
+| --- | --- |
+| starts_with | Optional string, but currently ignored. |
+| only_vacancy | Declared as a boolean, but URL values such as true fail validation. Currently ignored by the service. |
+
+Omit both parameters; there are no working room filters yet.
+
+**Request payload:**
+
+None.
+
+**Response structure (HTTP 200):**
+
+```json
+{
+  "status": "success",
+  "message": "All rooms fetched successfully",
+  "data": [
+    {
+      "id": 7,
+      "roomNumber": "A-101",
+      "capacity": 4,
+      "hostelId": 2,
+      "occupied": 2,
+      "remaining": 2
+    }
+  ],
+  "errors": null
+}
+```
+
+## 13. GET /rooms/{id}
+
+**Endpoint:** `GET /rooms/{id}` (HOSTEL_ADMIN)
+
+**What it does:** Get one room and its assigned-student count. The current backend has a hostel filtering issue.
+
+**Available query parameters:**
+
+None.
+
+**Request payload:**
+
+None.
+
+**Response structure (HTTP 200):**
+
+```json
+{
+  "status": "success",
+  "message": "Room fetched successfully",
+  "data": {
+    "id": 7,
+    "roomNumber": "A-101",
+    "capacity": 4,
+    "hostelId": 2,
+    "_count": {
+      "studentProfiles": 2
+    }
+  },
+  "errors": null
+}
+```
+
+## 14. PATCH /rooms/{id}
+
+**Endpoint:** `PATCH /rooms/{id}` (HOSTEL_ADMIN)
+
+**What it does:** Update a room number or capacity. The current backend has a hostel filtering issue.
+
+**Available query parameters:**
+
+None.
+
+**Request payload:**
+
+```json
+{
+  "capacity": 5
+}
+```
+
+Both fields are optional. Capacity must be a positive integer and cannot be lower than current occupancy.
+
+**Response structure (HTTP 200):**
+
+```json
+{
+  "status": "success",
+  "message": "Room updated successfully",
+  "data": {
+    "id": 7,
+    "roomNumber": "A-101",
+    "capacity": 5,
+    "hostelId": 2,
+    "createdAt": "2026-10-10T10:00:00.000Z",
+    "updatedAt": "2026-10-10T10:00:00.000Z"
+  },
+  "errors": null
+}
+```
+
+## 15. POST /leave_applications
+
+**Endpoint:** `POST /leave_applications` (STUDENT)
+
+**What it does:** Create a leave request for the signed-in student.
+
+**Available query parameters:**
+
+None.
+
+**Request payload:**
+
+```json
+{
+  "leaveReason": "Family function",
+  "fromDate": "2026-10-15T00:00:00.000Z",
+  "toDate": "2026-10-17T00:00:00.000Z"
+}
+```
+
+All fields are required. fromDate must be on or before toDate. A student can have only one pending request.
+
+**Response structure (HTTP 201):**
+
+```json
+{
+  "status": "success",
+  "message": "Leave application created successfully",
+  "data": {
+    "id": 31,
+    "leaveReason": "Family function",
+    "fromDate": "2026-10-15T00:00:00.000Z",
+    "toDate": "2026-10-17T00:00:00.000Z",
+    "status": "WAITING_FOR_APPROVAL",
+    "rejectionReason": null,
+    "studentId": 12,
+    "createdAt": "2026-10-10T10:00:00.000Z",
+    "updatedAt": "2026-10-10T10:00:00.000Z",
+    "reviewedAt": null
+  },
+  "errors": null
+}
+```
+
+## 16. GET /leave_applications
+
+**Endpoint:** `GET /leave_applications` (HOSTEL_ADMIN)
+
+**What it does:** Get all leave applications in the admin's hostel.
+
+**Available query parameters:**
+
+None.
+
+**Request payload:**
+
+None.
+
+**Response structure (HTTP 200):**
+
+```json
+{
+  "status": "success",
+  "message": "All leave applications fetched successfully",
+  "data": [
+    {
+      "id": 31,
+      "leaveReason": "Family function",
+      "fromDate": "2026-10-15T00:00:00.000Z",
+      "toDate": "2026-10-17T00:00:00.000Z",
+      "status": "WAITING_FOR_APPROVAL",
+      "rejectionReason": null,
+      "studentId": 12,
+      "createdAt": "2026-10-10T10:00:00.000Z",
+      "updatedAt": "2026-10-10T10:00:00.000Z",
+      "reviewedAt": null
+    }
+  ],
+  "errors": null
+}
+```
+
+## 17. GET /leave_applications/{id}
+
+**Endpoint:** `GET /leave_applications/{id}` (HOSTEL_ADMIN)
+
+**What it does:** Get one leave application for the admin.
+
+**Available query parameters:**
+
+None.
+
+**Request payload:**
+
+None.
+
+**Response structure (HTTP 200):**
+
+```json
+{
+  "status": "success",
+  "message": "Leave application fetched successfully",
+  "data": {
+    "id": 31,
+    "leaveReason": "Family function",
+    "fromDate": "2026-10-15T00:00:00.000Z",
+    "toDate": "2026-10-17T00:00:00.000Z",
+    "status": "WAITING_FOR_APPROVAL",
+    "rejectionReason": null,
+    "studentId": 12,
+    "createdAt": "2026-10-10T10:00:00.000Z",
+    "updatedAt": "2026-10-10T10:00:00.000Z",
+    "reviewedAt": null
+  },
+  "errors": null
+}
+```
+
+## 18. PATCH /leave_applications/{id}
+
+**Endpoint:** `PATCH /leave_applications/{id}` (STUDENT)
+
+**What it does:** Edit a pending leave application. Send both dates together when changing dates.
+
+**Available query parameters:**
+
+None.
+
+**Request payload:**
+
+```json
+{
+  "leaveReason": "Updated family travel",
+  "fromDate": "2026-10-16T00:00:00.000Z",
+  "toDate": "2026-10-18T00:00:00.000Z"
+}
+```
+
+All fields are optional. If changing dates, send both fromDate and toDate.
+
+**Response structure (HTTP 200):**
+
+```json
+{
+  "status": "success",
+  "message": "Leave application updated successfully",
+  "data": {
+    "id": 31,
+    "leaveReason": "Updated family travel",
+    "fromDate": "2026-10-16T00:00:00.000Z",
+    "toDate": "2026-10-18T00:00:00.000Z",
+    "status": "WAITING_FOR_APPROVAL",
+    "rejectionReason": null,
+    "studentId": 12,
+    "createdAt": "2026-10-10T10:00:00.000Z",
+    "updatedAt": "2026-10-10T10:00:00.000Z",
+    "reviewedAt": null
+  },
+  "errors": null
+}
+```
+
+## 19. PATCH /leave_applications/{id}/review
+
+**Endpoint:** `PATCH /leave_applications/{id}/review` (HOSTEL_ADMIN)
+
+**What it does:** Approve or reject a pending leave application.
+
+**Available query parameters:**
+
+None.
+
+**Request payload:**
+
+```json
+{
+  "status": "REJECTED",
+  "rejectionReason": "Examinations are scheduled during these dates."
+}
+```
+
+status must be APPROVED or REJECTED. rejectionReason is required when rejecting. To approve, send {"status":"APPROVED"}.
+
+**Response structure (HTTP 200):**
+
+```json
+{
+  "status": "success",
+  "message": "Leave application reviewed successfully",
+  "data": {
+    "id": 31,
+    "leaveReason": "Family function",
+    "fromDate": "2026-10-15T00:00:00.000Z",
+    "toDate": "2026-10-17T00:00:00.000Z",
+    "status": "REJECTED",
+    "rejectionReason": "Examinations are scheduled during these dates.",
+    "studentId": 12,
+    "createdAt": "2026-10-10T10:00:00.000Z",
+    "updatedAt": "2026-10-10T10:00:00.000Z",
+    "reviewedAt": null
+  },
+  "errors": null
+}
+```
+
+## 20. PATCH /leave_applications/{id}/cancel
+
+**Endpoint:** `PATCH /leave_applications/{id}/cancel` (STUDENT)
+
+**What it does:** Cancel a pending leave application.
+
+**Available query parameters:**
+
+None.
+
+**Request payload:**
+
+None.
+
+**Response structure (HTTP 200):**
+
+```json
+{
+  "status": "success",
+  "message": "Leave application cancelled successfully",
+  "data": {
+    "id": 31,
+    "leaveReason": "Family function",
+    "fromDate": "2026-10-15T00:00:00.000Z",
+    "toDate": "2026-10-17T00:00:00.000Z",
+    "status": "CANCELLED",
+    "rejectionReason": null,
+    "studentId": 12,
+    "createdAt": "2026-10-10T10:00:00.000Z",
+    "updatedAt": "2026-10-10T10:00:00.000Z",
+    "reviewedAt": null
+  },
+  "errors": null
+}
+```
+
+## 21. POST /upcoming_events
+
+**Endpoint:** `POST /upcoming_events` (HOSTEL_ADMIN)
+
+**What it does:** Create an event for the admin's hostel.
+
+**Available query parameters:**
+
+None.
+
+**Request payload:**
+
+```json
+{
+  "eventName": "Hostel sports day",
+  "eventDescription": "Annual sports activities for hostel residents.",
+  "startingAt": "2026-10-20T03:30:00.000Z",
+  "endingAt": "2026-10-20T12:30:00.000Z",
+  "eventImageKey": "events/sports-day.jpg",
+  "eventLink": "https://ourhostel.in/events/sports-day",
+  "contactPersonName": "Ravi",
+  "contactPersonPhone": "9876543212"
+}
+```
+
+Required: eventName, eventDescription, startingAt, endingAt. Other fields are optional. Send dates as ISO datetime strings and eventLink as a valid URL.
+
+**Response structure (HTTP 201):**
+
+```json
+{
+  "status": "success",
+  "message": "Upcoming event created successfully",
+  "data": {
+    "id": 9,
+    "eventName": "Hostel sports day",
+    "eventDescription": "Annual sports activities for hostel residents.",
+    "startingAt": "2026-10-20T03:30:00.000Z",
+    "endingAt": "2026-10-20T12:30:00.000Z",
+    "isActive": true,
+    "eventImageKey": "events/sports-day.jpg",
+    "eventLink": "https://ourhostel.in/events/sports-day",
+    "contactPersonName": "Ravi",
+    "contactPersonPhone": "9876543212",
+    "hostelId": 2
+  },
+  "errors": null
+}
+```
+
+## 22. GET /upcoming_events
+
+**Endpoint:** `GET /upcoming_events` (HOSTEL_ADMIN or STUDENT)
+
+**What it does:** Get events for the signed-in user's hostel. The list also includes past and inactive events.
+
+**Available query parameters:**
+
+None.
+
+**Request payload:**
+
+None.
+
+**Response structure (HTTP 200):**
+
+```json
+{
+  "status": "success",
+  "message": "All upcoming events fetched successfully",
+  "data": [
+    {
+      "id": 9,
+      "eventName": "Hostel sports day",
+      "eventDescription": "Annual sports activities for hostel residents.",
+      "startingAt": "2026-10-20T03:30:00.000Z",
+      "endingAt": "2026-10-20T12:30:00.000Z",
+      "isActive": true,
+      "eventImageKey": "events/sports-day.jpg",
+      "eventLink": "https://ourhostel.in/events/sports-day",
+      "contactPersonName": "Ravi",
+      "contactPersonPhone": "9876543212",
+      "hostelId": 2
+    }
+  ],
+  "errors": null
+}
+```
+
+## 23. GET /upcoming_events/{id}
+
+**Endpoint:** `GET /upcoming_events/{id}` (HOSTEL_ADMIN or STUDENT)
+
+**What it does:** Get one event by its ID.
+
+**Available query parameters:**
+
+None.
+
+**Request payload:**
+
+None.
+
+**Response structure (HTTP 200):**
+
+```json
+{
+  "status": "success",
+  "message": "Upcoming event fetched successfully",
+  "data": {
+    "id": 9,
+    "eventName": "Hostel sports day",
+    "eventDescription": "Annual sports activities for hostel residents.",
+    "startingAt": "2026-10-20T03:30:00.000Z",
+    "endingAt": "2026-10-20T12:30:00.000Z",
+    "isActive": true,
+    "eventImageKey": "events/sports-day.jpg",
+    "eventLink": "https://ourhostel.in/events/sports-day",
+    "contactPersonName": "Ravi",
+    "contactPersonPhone": "9876543212",
+    "hostelId": 2
+  },
+  "errors": null
+}
+```
+
+## 24. PATCH /upcoming_events/{id}
+
+**Endpoint:** `PATCH /upcoming_events/{id}` (HOSTEL_ADMIN)
+
+**What it does:** Update event details or set isActive to false.
+
+**Available query parameters:**
+
+None.
+
+**Request payload:**
+
+```json
+{
+  "eventDescription": "Updated sports schedule.",
+  "isActive": false
+}
+```
+
+All event-create fields are optional. isActive is an optional boolean. Omit unchanged fields.
+
+**Response structure (HTTP 200):**
+
+```json
+{
+  "status": "success",
+  "message": "Upcoming event updated",
+  "data": {
+    "id": 9,
+    "eventName": "Hostel sports day",
+    "eventDescription": "Updated sports schedule.",
+    "startingAt": "2026-10-20T03:30:00.000Z",
+    "endingAt": "2026-10-20T12:30:00.000Z",
+    "isActive": false,
+    "eventImageKey": "events/sports-day.jpg",
+    "eventLink": "https://ourhostel.in/events/sports-day",
+    "contactPersonName": "Ravi",
+    "contactPersonPhone": "9876543212",
+    "hostelId": 2
+  },
+  "errors": null
+}
+```
+
+## 25. /students/forgot_password - Not implemented
+
+**Endpoint:** `/students/forgot_password` (HTTP method not defined in this project)
+
+**What it does:** Intended to email a password reset link to a registered address. This exact endpoint is not implemented.
+
+**Available query parameters:** None defined.
+
+**Request payload:** Not defined.
+
+**Response structure:** No success response is available. Requests may return 404 or a route-matching error.
+
+## 26. /hostel-admin/dashboard - Not implemented
+
+**Endpoint:** `/hostel-admin/dashboard` (HTTP method not defined in this project)
+
+**What it does:** Intended to get the admin dashboard overview. This exact endpoint is not implemented.
+
+**Available query parameters:** None defined.
+
+**Request payload:** Not defined.
+
+**Response structure:** No success response is available. Requests may return 404 or a route-matching error.
+
+## 27. /leave_applications/student/my_leave_applications - Not implemented
+
+**Endpoint:** `/leave_applications/student/my_leave_applications` (HTTP method not defined in this project)
+
+**What it does:** Intended to get the signed-in student's own leave applications. This exact endpoint is not implemented.
+
+**Available query parameters:** None defined.
+
+**Request payload:** Not defined.
+
+**Response structure:** No success response is available. Requests may return 404 or a route-matching error.
+
+## 28. /leave_applications/student/my_leave_applications/{id} - Not implemented
+
+**Endpoint:** `/leave_applications/student/my_leave_applications/{id}` (HTTP method not defined in this project)
+
+**What it does:** Intended to get one of the signed-in student's own leave applications. This exact endpoint is not implemented.
+
+**Available query parameters:** None defined.
+
+**Request payload:** Not defined.
+
+**Response structure:** No success response is available. Requests may return 404 or a route-matching error.
+
+## 29. /media/upload_url - Not implemented
+
+**Endpoint:** `/media/upload_url` (HTTP method not defined in this project)
+
+**What it does:** Intended to get a temporary S3 upload URL and object key. This exact endpoint is not implemented.
+
+**Available query parameters:** None defined. The proposed media_for parameter is not implemented.
+
+**Request payload:** Not defined.
+
+**Response structure:** No success response is available. Requests may return 404 or a route-matching error.
+
+## 30. /media/download_url - Not implemented
+
+**Endpoint:** `/media/download_url` (HTTP method not defined in this project)
+
+**What it does:** Intended to get a temporary S3 download URL for an uploaded object. This exact endpoint is not implemented.
+
+**Available query parameters:** None defined. The proposed image_key parameter is not implemented.
+
+**Request payload:** Not defined.
+
+**Response structure:** No success response is available. Requests may return 404 or a route-matching error.
+
+## Common error response
+
+```json
+{
+  "status": "failure",
+  "message": "Invalid request",
+  "data": null,
+  "errors": {
+    "email": "Invalid email address"
+  }
+}
+```
+
+`errors` can be a field/message object or a string. Common errors: 400 for invalid credentials or missing auth header, 401 for expired/invalid token, 403 for wrong role, 404 for missing resource, 409 for conflicts, and 422 for invalid input. Missing endpoints may return HTML instead of JSON.
