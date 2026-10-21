@@ -246,7 +246,8 @@ const getStudentHomeScreenData = async (accessContext) => {
 const setupNewPassword = async (accessContext, setupNewPasswordRequestBody) => {
   const {
     token,
-    newPassword
+    newPassword,
+    forgotPassword
   } = setupNewPasswordRequestBody;
 
   //token validations
@@ -263,7 +264,7 @@ const setupNewPassword = async (accessContext, setupNewPasswordRequestBody) => {
   const user = await StudentRepository.findUserById(tokenFromDB.userId);
   if (!user) throw createHttpError(404, "User not found", { errors: "User not found" });
 
-  if (user.status !== "PENDING_ACTIVATION") throw createHttpError(422, "User is already " + user.status + " so contact hostel admin", { errors: "Invalid user status for setup new password" });
+  if (!forgotPassword && user.status !== "PENDING_ACTIVATION") throw createHttpError(422, "User is already " + user.status + " so contact hostel admin", { errors: "Invalid user status for setup new password" });
 
   const hashedPassword = await getHasedVersionOfPassword(newPassword);
   //change password of user
@@ -309,6 +310,39 @@ const sendActivationLinkMail = async (accessContext, studentProfileId) => {
   return "Account activation email sent";
 };
 
+const forgotPasswordRequest = async (forgotPasswordRequestBody) => {
+  const {
+    email
+  } = forgotPasswordRequestBody;
+
+  //this is actually user table's record
+  const studentInThisEmail = await StudentRepository.findUserByEmail(null, email);
+
+  if (!studentInThisEmail) throw createHttpError(404, "Student profile not found", { errors: "Cannot find" });
+
+  if (!studentInThisEmail.studentProfileId) {
+
+  }
+
+  const { rawToken, hashedToken } = generateActivationToken();
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+  const activationLink = `ourhostel://setup-password?forgotPassword=true&token=${rawToken}`;
+
+  const accountSetupToken = StudentRepository.createAccountSetupTokenRecord(null, studentInThisEmail.id, hashedToken, expiresAt);
+
+  const emailResponse = await sendEmail(email, "Account activation for ourhostel.in", "Please click the link to activate your account, the link will be expired in 5 mins",
+    `<div>
+      <h1>Heyyyyyyyy setup new password fast </h1>
+      <p>
+        Click this link to setup new password for your account  
+        This will be expired in 5 mins
+        <a href="${activationLink}">${activationLink}</a>.
+      </p> 
+    </div>`)
+
+  return "New password setup link email sent";
+};
+
 const StudentService = {
   createStudent,
   getAllStudentProfiles,
@@ -320,6 +354,7 @@ const StudentService = {
   setupNewPassword,
   getAllDepartments,
   sendActivationLinkMail,
+  forgotPasswordRequest
 };
 
 export default StudentService;

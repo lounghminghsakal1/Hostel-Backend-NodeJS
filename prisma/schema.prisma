@@ -87,6 +87,7 @@ model Hostel {
   rooms        Room[]
   students StudentProfile[]
   upcomingEvents UpcomingEvent[]
+  monthlyMessBills MonthlyMessBill[]
 
   @@unique([collegeId, hostelName])
 }
@@ -147,6 +148,7 @@ model StudentProfile {
   hostel Hostel @relation(fields: [hostelId], references: [id])
   leaveApplications LeaveApplication[]
   attendanceRecords AttendanceRecord[]
+  messFeePayments MessFeePayment[]
 
   @@unique([hostelId, rollNumber])
 
@@ -242,5 +244,59 @@ model UpcomingEvent {
   hostelId Int 
 
   hostel Hostel @relation(fields: [hostelId], references: [id])
+}
+
+
+enum MonthEnum {
+  JANUARY
+  FEBRUARY
+  MARCH
+  APRIL 
+  MAY
+  JUNE
+  JULY
+  AUGUST
+  SEPTEMBER
+  OCTOBER
+  NOVEMBER
+  DECEMBER
+}
+
+enum MonthlyMessBillStatusEnum {
+  DRAFT
+  PUBLISHED
+  EXPIRED
+}
+
+model MonthlyMessBill {
+  id Int @id @default(autoincrement())
+  month MonthEnum
+  year Int
+  amount Decimal @db.Decimal(10,2)
+  lastDate DateTime
+  status MonthlyMessBillStatusEnum @default(DRAFT)
+
+  hostelId Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  hostel Hostel @relation(fields: [hostelId], references: [id])
+
+  messFeePayments MessFeePayment[]
+  
+  @@unique([month, year, hostelId])
+}
+
+model MessFeePayment {
+  id Int @id @default(autoincrement())
+  monthlyMessBillId Int
+  studentProfileId Int
+  paidAt DateTime @default(now())
+
+  monthlyMessBill MonthlyMessBill @relation(fields: [monthlyMessBillId], references: [id])
+  student StudentProfile @relation(fields: [studentProfileId], references: [id])
+
+  @@unique([monthlyMessBillId, studentProfileId])
 }
 

@@ -44,7 +44,6 @@ const getAttendanceRecordsPresent = async (attendanceWhere, skip, take) => {
     skip,
     take
   });
-  console.log(result);
   return result;
 };
 

@@ -1,6 +1,7 @@
 import { prisma } from "../../configs/db.js";
 
 const createUpcomingEvent = async (eventName, eventDescription, startingAt, endingAt, eventImageKey, eventLink, contactPersonName, contactPersonPhone, hostelId) => {
+  
   return await prisma.upcomingEvent.create({
     data: {
       eventName,

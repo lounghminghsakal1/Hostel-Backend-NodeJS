@@ -63,6 +63,11 @@ const sendActivationLinkMail = async (req, res) => {
   return Responses.successResponse(res, "Account activation mail sent successfully", activationMailSentResponse);
 };
 
+const forgotPasswordRequest = async (req, res) => {
+  const forgotPasswordResponse = await StudentService.forgotPasswordRequest(req.body);
+  return Responses.successResponse(res, "New password setup link has been sent to your email", forgotPasswordResponse);
+};
+
 const StudentController = {
   createStudent,
   getAllStudentProfiles,
@@ -74,6 +79,7 @@ const StudentController = {
   setupNewPassword,
   getAllDepartments,
   sendActivationLinkMail,
+  forgotPasswordRequest,
 };
 
 // const getAccessContext = (req) => {
