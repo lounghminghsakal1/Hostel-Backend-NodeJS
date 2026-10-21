@@ -13,12 +13,22 @@ import path from "path";
 import { fileURLToPath } from "url";
 import attendanceRecordsRouter from "./modules/attendance-records/attndr.routes.js";
 import upcomingEventsRouter from "./modules/upcoming-events/upcoming-events.routes.js";
+import cors from "cors";
 
 const app = express();
 
 const prefix_api = envValues.API_PREFIX;
 
 app.use(express.json());
+
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:3001"
+];
+
+app.use(cors({
+  origin: allowedOrigins
+}));
 
 app.use(`${prefix_api}/auth`, authRouter);
 
@@ -32,7 +42,7 @@ app.use(`${prefix_api}/rooms`, roomsRouter);
 
 app.use(`${prefix_api}/leave_applications`, leaveApplicationRouter);
 
-app.use(`${prefix_api}/media`, UploadDownloadRouter);  
+app.use(`${prefix_api}/media`, UploadDownloadRouter);
 
 const __fileName = fileURLToPath(import.meta.url);
 const __dirName = path.dirname(__fileName);
