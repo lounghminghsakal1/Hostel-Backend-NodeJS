@@ -8,10 +8,13 @@ import studentRouter from "./modules/students/student.routes.js";
 import hostelRouter from "./modules/hostels/hostel.routes.js";
 import roomsRouter from "./modules/rooms/room.routes.js";
 import leaveApplicationRouter from "./modules/leave-applications/leave-appln.routes.js";
-import uploadRouter from "./modules/upload/upload.routes.js";
+import UploadDownloadRouter from "./modules/upload-download/upload-download.routes.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import attendanceRecordsRouter from "./modules/attendance-records/attndr.routes.js";
+import upcomingEventsRouter from "./modules/upcoming-events/upcoming-events.routes.js";
+import MessFeeRouter from "./modules/mess-fees/mess-fee.routes.js";
+import cors from "cors";
 import announcementRouter from "./modules/announcements/announcement.routes.js";
 
 const app = express();
@@ -19,6 +22,15 @@ const app = express();
 const prefix_api = envValues.API_PREFIX;
 
 app.use(express.json());
+
+const allowedOrigins = [
+  "http://localhost:3000",
+  "http://localhost:3001"
+];
+
+app.use(cors({
+  origin: allowedOrigins
+}));
 
 app.use(`${prefix_api}/auth`, authRouter);
 
@@ -32,7 +44,7 @@ app.use(`${prefix_api}/rooms`, roomsRouter);
 
 app.use(`${prefix_api}/leave_applications`, leaveApplicationRouter);
 
-app.use(`${prefix_api}/upload`, uploadRouter);
+app.use(`${prefix_api}/media`, UploadDownloadRouter);
 
 const __fileName = fileURLToPath(import.meta.url);
 const __dirName = path.dirname(__fileName);
@@ -44,6 +56,9 @@ app.use(
 
 app.use(`${prefix_api}/attendance_records`, attendanceRecordsRouter);
 
+app.use(`${prefix_api}/upcoming_events`, upcomingEventsRouter);
+
+app.use(`${prefix_api}/mess_fee`, MessFeeRouter);
 app.use(`${prefix_api}/announcements`, announcementRouter);
 
 app.use(gloabalErrorHandlerMiddleware);

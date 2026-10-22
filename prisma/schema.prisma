@@ -26,14 +26,15 @@ model Role {
 enum UserStatusEnum {
   ACTIVE
   INACTIVE
+  PENDING_ACTIVATION
   SUSPENDED
 }
 
 model User {
   id                 Int            @id @default(autoincrement())
   email              String         @unique
-  passwordHash       String
-  status             UserStatusEnum @default(ACTIVE)
+  passwordHash       String?
+  status             UserStatusEnum @default(PENDING_ACTIVATION)
   mustChangePassword Boolean        @default(false)
 
   roleId    Int
@@ -45,6 +46,9 @@ model User {
   studentProfile     StudentProfile?
   hostelAdminProfile HostelAdminProfile?
 
+  role       Role    @relation(fields: [roleId], references: [id])
+  college    College @relation(fields: [collegeId], references: [id])
+  accountSetupTokens AccountSetupToken[]
   role    Role    @relation(fields: [roleId], references: [id])
   college College @relation(fields: [collegeId], references: [id])
 }
@@ -84,6 +88,9 @@ model Hostel {
   hostelAdmins HostelAdminProfile[]
   college      College              @relation(fields: [collegeId], references: [id])
   rooms        Room[]
+  students StudentProfile[]
+  upcomingEvents UpcomingEvent[]
+  monthlyMessBills MonthlyMessBill[]
   students     StudentProfile[]
 
   @@unique([collegeId, hostelName])
@@ -126,7 +133,7 @@ model StudentProfile {
   studentName        String
   contactNumber      String @unique
   parentMobileNumber String
-  studentImageUrl    String?
+  studentImageKey    String?
   rollNumber         String
 
   userId       Int  @unique
@@ -146,6 +153,10 @@ model StudentProfile {
 
   leaveApplications LeaveApplication[]
   attendanceRecords AttendanceRecord[]
+  messFeePayments MessFeePayment[]
+
+  @@unique([hostelId, rollNumber])
+
 }
 
 model HostelAdminProfile {
@@ -191,6 +202,13 @@ model LeaveApplication {
 }
 
 model AttendanceRecord {
+  id                    Int         @id @default(autoincrement())
+  attendanceDate        DateTime    @db.Date
+  reportedTime          DateTime    @default(now())
+  capturedImageKey      String
+  faceMatchingPercentage    Float     
+  latitude              Float
+  longitude             Float
   id                          Int      @id @default(autoincrement())
   attendanceDate              DateTime @db.Date
   reportedTime                DateTime @default(now())
@@ -207,6 +225,93 @@ model AttendanceRecord {
 
   @@unique([studentId, attendanceDate])
 }
+
+model AccountSetupToken {
+  id Int @id @default(autoincrement())
+  userId Int 
+  tokenHash String @unique
+  expiresAt DateTime
+  usedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model UpcomingEvent {
+  id Int @id @default(autoincrement())
+  eventName String
+  eventDescription String
+  startingAt DateTime
+  endingAt DateTime
+  isActive Boolean @default(true)
+
+  eventImageKey String? 
+  eventLink String?
+  contactPersonName String?
+  contactPersonPhone String?
+
+  hostelId Int 
+
+  hostel Hostel @relation(fields: [hostelId], references: [id])
+}
+
+
+enum MonthEnum {
+  JANUARY
+  FEBRUARY
+  MARCH
+  APRIL 
+  MAY
+  JUNE
+  JULY
+  AUGUST
+  SEPTEMBER
+  OCTOBER
+  NOVEMBER
+  DECEMBER
+}
+
+enum MonthlyMessBillStatusEnum {
+  DRAFT
+  PUBLISHED
+  EXPIRED
+}
+
+model MonthlyMessBill {
+  id Int @id @default(autoincrement())
+  month MonthEnum
+  year Int
+  amount Decimal @db.Decimal(10,2)
+  lastDate DateTime
+  status MonthlyMessBillStatusEnum @default(DRAFT)
+
+  hostelId Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  hostel Hostel @relation(fields: [hostelId], references: [id])
+
+  messFeePayments MessFeePayment[]
+  
+  @@unique([month, year, hostelId])
+}
+
+model MessFeePayment {
+  id Int @id @default(autoincrement())
+  monthlyMessBillId Int
+  studentProfileId Int
+  paidAt DateTime @default(now())
+
+  monthlyMessBill MonthlyMessBill @relation(fields: [monthlyMessBillId], references: [id])
+  student StudentProfile @relation(fields: [studentProfileId], references: [id])
+
+  @@unique([monthlyMessBillId, studentProfileId])
+}
+
 
 model Announcement {
   id               Int      @id @default(autoincrement())

@@ -26,6 +26,7 @@ export const getDateRange = (fromDate, toDate = fromDate) => {
   //here fromDate and toDate comes from query param which is string so if we pass that to new Date() we get date object which we can use it for db filters, because prisma expects date object for filtering date type columns
   const startDate = new Date(`${fromDate}T00:00:00.000Z`); //here attaching time as 00 (midnight) so that it converted correctly
   const endDate = new Date(toDate); // if we don't specify 00(midnight) it automatically converts it to midnight only(start of the day)
+  endDate.setUTCDate(endDate.getUTCDate() + 1);
   // console.log(startDate);
   // console.log(endDate);
   // console.log(typeof startDate);
@@ -43,7 +44,7 @@ export const getDatesListBetween = (startDate, endDate) => {
   const curr = new Date(startDate);
   const end = new Date(endDate);
 
-  while(curr <= end) {
+  while(curr < end) { //less than or requal (<=) or just less than (<) ?? , think about it 
     dates.push(curr.toISOString().split("T")[0]);
     curr.setUTCDate(curr.getUTCDate() + 1); //going to next date
   }

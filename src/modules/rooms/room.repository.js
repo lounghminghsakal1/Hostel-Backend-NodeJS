@@ -25,6 +25,17 @@ const getRooms = async (hostelId, collegeId) => {
   return await prisma.room.findMany({
     where: {
       hostelId: hostelId,
+    },
+    select: {
+      id: true,
+      roomNumber: true,
+      capacity: true,
+      hostelId: true,
+      _count: {
+        select: {
+          studentProfiles: true
+        }
+      }
     }
   });
 };

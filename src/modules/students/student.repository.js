@@ -1,9 +1,13 @@
 import { prisma } from "../../configs/db.js";
 
 const findUserByEmail = async (tx, email) => {
-  const user = await tx.user.findUnique({
+  const user = tx ? await tx.user.findUnique({
     where: {
       email: email
+    }
+  }) : await prisma.user.findUnique({
+    where: {
+      email
     }
   });
   return user;
@@ -62,11 +66,10 @@ const findRoleByRoleName = (tx, roleName) => {
   });
 };
 
-const createUser = async (tx, email, passwordHash, roleId, collegeId) => {
+const createUser = async (tx, email, roleId, collegeId) => {
   return tx.user.create({
     data: {
       email: email,
-      passwordHash: passwordHash,
       roleId: roleId,
       collegeId: collegeId,
       mustChangePassword: true
@@ -74,7 +77,7 @@ const createUser = async (tx, email, passwordHash, roleId, collegeId) => {
   });
 };
 
-const createStudentProfile = async (tx, studentName, contactNumber, parentMobileNumber, userId, departmentId, roomId, studentImageUrl, collegeId, hostelId) => {
+const createStudentProfile = async (tx, studentName, contactNumber, parentMobileNumber, userId, departmentId, rollNumber, roomId, studentImageKey, collegeId, hostelId) => {
   return await tx.studentProfile.create({
     data: {
       studentName: studentName,
@@ -82,7 +85,8 @@ const createStudentProfile = async (tx, studentName, contactNumber, parentMobile
       parentMobileNumber: parentMobileNumber,
       userId: userId,
       departmentId: departmentId,
-      studentImageUrl: studentImageUrl ?? null,
+      studentImageKey: studentImageKey ?? null,
+      rollNumber: rollNumber,
       roomId: roomId ?? null,
       collegeId: collegeId,
       hostelId: hostelId
@@ -140,7 +144,7 @@ const findStudentProfileById = async (id, hostelId, collegeId) => {
   return studentProfile;
 };
 
-const updateStudentProfile = async (tx, id, studentName, contactNumber, parentMobileNumber, departmentId, roomId, studentImageUrl) => {
+const updateStudentProfile = async (tx, id, studentName, contactNumber, parentMobileNumber, departmentId, roomId, studentImageKey) => {
   
   return tx.studentProfile.update({
     where: {
@@ -151,7 +155,7 @@ const updateStudentProfile = async (tx, id, studentName, contactNumber, parentMo
       contactNumber: contactNumber ?? undefined,
       parentMobileNumber: parentMobileNumber ?? undefined,
       departmentId: departmentId ?? undefined,
-      studentImageUrl: studentImageUrl ?? undefined,
+      studentImageKey: studentImageKey ?? undefined,
       roomId: roomId ?? undefined,
     }
   });
@@ -214,6 +218,61 @@ const getTodayMarkedAttendanceOfStudent = async (studentProfileId) => {
   });
 };
 
+const createAccountSetupTokenRecord = async (tx, userId, tokenHash, expiresAt) => {
+  return tx ? await tx.accountSetupToken.create({
+    data: {
+      userId: userId,
+      tokenHash: tokenHash,
+      expiresAt: expiresAt
+    }
+  }) : await prisma.accountSetupToken.create({
+    data: {
+      userId,
+      tokenHash,
+      expiresAt
+    }
+  });
+};
+
+const findToken = async (hashedToken) => {
+  return await prisma.accountSetupToken.findFirst({
+    where: {
+      tokenHash: hashedToken
+    }
+  });
+};
+
+const setupNewPasswordToUser = async (userId, hashedPassword) => {
+  return await prisma.user.update({
+    where: {
+      id: userId
+    },
+    data: {
+      passwordHash: hashedPassword,
+      status: "ACTIVE"
+    }
+  });
+};
+
+const updatedAccountSetupTokenRecord = async (id) => {
+  return await prisma.accountSetupToken.update({
+    where: {
+      id: id
+    },
+    data: {
+      usedAt: new Date()
+    }
+  });
+};
+
+const getAllDepartments = async (collegeId) => {
+  return await prisma.department.findMany({
+    where: {
+      collegeId: collegeId
+    }
+  });
+};
+
 const StudentRepository = {
   findUserByEmail,
   findStudentProfileByContactNumber,
@@ -233,6 +292,11 @@ const StudentRepository = {
   updateRoomOfThestudent,
   getHostelOftheStudent,
   getTodayMarkedAttendanceOfStudent,
+  createAccountSetupTokenRecord,
+  findToken,
+  setupNewPasswordToUser,
+  updatedAccountSetupTokenRecord,
+  getAllDepartments,
 };
 
 export default StudentRepository;

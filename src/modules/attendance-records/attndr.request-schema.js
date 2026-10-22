@@ -2,7 +2,7 @@ import { z } from "zod";
 import { paginationQuerySchema } from "../../utils/pagination.utils.js";
 
 export const createAttendanceRecordRequestBodySchema = z.object({
-  capturedImageUrl: z.url(),
+  capturedImageKey: z.string(),
   latitude: z.float64().min(-90).max(90),
   longitude: z.float64().min(-180).max(180)
 });
