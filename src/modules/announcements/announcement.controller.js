@@ -1,34 +1,40 @@
+import { getAccessContext } from "../../utils/helper-functions.utils.js";
+import Responses from "../../utils/responses.utils.js";
 import AnnouncementService from "./announcement.service.js";
 
 const createAnnouncement = async (req, res) => {
-  const announcement = await AnnouncementService.createAnnouncement(req.body);
+  const accessContext = getAccessContext(req);
+  const createdAnnouncement = await AnnouncementService.createAnnouncement(accessContext, req.body);
 
-  res.status(201).json(announcement);
+  return Responses.successResponse(res, "Announcement created successfully", createdAnnouncement, 201);
 };
 
 const getAnnouncements = async (req, res) => {
-  const announcements = await AnnouncementService.getAnnouncements();
+  const accessContext = getAccessContext(req);
+  const announcements = await AnnouncementService.getAnnouncements(accessContext);
 
-  res.status(200).json(announcements);
+  return Responses.successResponse(res, "All announcements fetched successfully", announcements);
 };
 
 const getAnnouncementById = async (req, res) => {
+  const accessContext = getAccessContext(req);
   const id = Number(req.params.id);
 
-  const announcement = await AnnouncementService.getAnnouncementById(id);
+  const announcement = await AnnouncementService.getAnnouncementById(id, accessContext.loggedInAdminHostelId);
 
-  res.status(200).json(announcement);
+  return Responses.successResponse(res, "Announcement fetched successfully", announcement);
 };
 
 const updateAnnouncement = async (req, res) => {
   const id = Number(req.params.id);
-
-  const announcement = await AnnouncementService.updateAnnouncement(
+  const accessContext = getAccessContext(req);
+  const updatedAnnouncement = await AnnouncementService.updateAnnouncement(
+    accessContext,
     id,
     req.body
   );
 
-  res.status(200).json(announcement);
+  return Responses.successResponse(res, "Announcement updated successfully", updatedAnnouncement);
 };
 
 const deleteAnnouncement = async (req, res) => {

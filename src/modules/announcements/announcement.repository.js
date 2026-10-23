@@ -8,10 +8,11 @@ const createAnnouncement = async (announcementData) => {
   return announcement;
 };
 
-const getAnnouncementById = async (id) => {
+const getAnnouncementById = async (id, hostelId) => {
   const announcement = await prisma.announcement.findUnique({
     where: {
       id: Number(id),
+      hostelId
     },
   });
 
@@ -39,10 +40,10 @@ const deleteAnnouncement = async (id) => {
   return announcement;
 };
 
-const getAnnouncements = async () => {
+const getAnnouncements = async (hostelId) => {
   const announcements = await prisma.announcement.findMany({
-    orderBy: {
-      priority: "asc",
+    where: {
+      hostelId
     },
   });
 

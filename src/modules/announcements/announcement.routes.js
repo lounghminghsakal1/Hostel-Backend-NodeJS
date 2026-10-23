@@ -1,16 +1,24 @@
 import express from "express";
 import AnnouncementController from "./announcement.controller.js";
+import authenticateUserMiddleware from "../../middlewares/authentication.middleware.js";
+import authorizeUserMiddleware from "../../middlewares/authorization.middleware.js";
+import validateRequestMiddleware from "../../middlewares/validate-request.middleware.js";
+import { createAnnouncementRequestBodySchema, updateAnnouncementRequestBodySchema } from "./announcement.request-schema.js";
 
 const router = express.Router();
 
-router.post("/", AnnouncementController.createAnnouncement);
+const hostelAdminRole = "HOSTEL_ADMIN";
+const studentRole = "STUDENT";
 
-router.get("/", AnnouncementController.getAnnouncements);
+router.post("/", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware({body: createAnnouncementRequestBodySchema}), AnnouncementController.createAnnouncement);
 
-router.get("/:id", AnnouncementController.getAnnouncementById);
+router.get("/", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), AnnouncementController.getAnnouncements);
 
-router.patch("/:id", AnnouncementController.updateAnnouncement);
+router.get("/:id", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), AnnouncementController.getAnnouncementById);
 
-router.delete("/:id", AnnouncementController.deleteAnnouncement);
+router.patch("/:id", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware({body: updateAnnouncementRequestBodySchema}) ,AnnouncementController.updateAnnouncement);
+
+
+// router.delete("/:id", AnnouncementController.deleteAnnouncement);
 
 export default router;
