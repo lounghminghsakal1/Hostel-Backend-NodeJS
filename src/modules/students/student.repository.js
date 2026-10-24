@@ -94,13 +94,19 @@ const createStudentProfile = async (tx, studentName, contactNumber, parentMobile
   });
 };
 
-const getAllStudentProfiles = async (hostelId, collegeId) => {
-  return await prisma.studentProfile.findMany({
-    where: {
-      hostelId: hostelId,
-      collegeId: collegeId
-    }
+const getAllStudentProfiles = async (studentsWhere, skip, take) => {
+  const students = await prisma.studentProfile.findMany({
+    where: studentsWhere,
+    orderBy: {id: "asc"},
+    skip,
+    take
   });
+
+  const studentsCount = await prisma.studentProfile.count({
+    where: studentsWhere
+  });
+
+  return {students, studentsCount};
 };
 
 const getOneStudentProfileById = async (id, hostelId, collegeId) => {

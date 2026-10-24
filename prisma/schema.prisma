@@ -40,8 +40,8 @@ model User {
   roleId Int
   collegeId Int
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
   studentProfile     StudentProfile?    
   hostelAdminProfile HostelAdminProfile? 
@@ -79,8 +79,8 @@ model Hostel {
 
   collegeId Int
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
   hostelAdmins HostelAdminProfile[]
   college      College              @relation(fields: [collegeId], references: [id])
@@ -115,8 +115,8 @@ model Room {
 
   hostelId        Int
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
   hostel          Hostel           @relation(fields: [hostelId], references: [id])
   studentProfiles StudentProfile[]
@@ -138,8 +138,8 @@ model StudentProfile {
   collegeId Int
   hostelId Int
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id])
   department Department @relation(fields: [departmentId], references: [id])
@@ -163,8 +163,8 @@ model HostelAdminProfile {
   hostelId Int
   collegeId Int
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id])
   hostel Hostel @relation(fields: [hostelId], references: [id])
@@ -181,17 +181,17 @@ enum LeaveApplicationStatusEnum {
 model LeaveApplication {
   id Int @id @default(autoincrement())
   leaveReason String 
-  fromDate DateTime 
-  toDate DateTime
+  fromDate DateTime @db.Date
+  toDate DateTime @db.Date
   status LeaveApplicationStatusEnum @default(WAITING_FOR_APPROVAL)
   rejectionReason String?
 
   studentId Int 
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @db.Timestamptz(3)
 
-  reviewedAt DateTime?
+  reviewedAt DateTime? @db.Timestamptz(3)
 
   student StudentProfile @relation(fields: [studentId], references: [id])
 }
@@ -199,7 +199,7 @@ model LeaveApplication {
 model AttendanceRecord {
   id                    Int         @id @default(autoincrement())
   attendanceDate        DateTime    @db.Date
-  reportedTime          DateTime    @default(now())
+  reportedTime          DateTime    @default(now()) @db.Timestamptz(3)
   capturedImageKey      String
   faceMatchingPercentage    Float     
   latitude              Float
@@ -218,10 +218,10 @@ model AccountSetupToken {
   id Int @id @default(autoincrement())
   userId Int 
   tokenHash String @unique
-  expiresAt DateTime
-  usedAt DateTime?
+  expiresAt DateTime @db.Timestamptz(3)
+  usedAt DateTime? @db.Timestamptz(3)
 
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id])
 
@@ -232,14 +232,17 @@ model UpcomingEvent {
   id Int @id @default(autoincrement())
   eventName String
   eventDescription String
-  startingAt DateTime
-  endingAt DateTime
+  startingAt DateTime @db.Timestamptz(3)
+  endingAt DateTime @db.Timestamptz(3)
   isActive Boolean @default(true)
 
   eventImageKey String? 
   eventLink String?
   contactPersonName String?
   contactPersonPhone String?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
   hostelId Int 
 
@@ -273,13 +276,13 @@ model MonthlyMessBill {
   month MonthEnum
   year Int
   amount Decimal @db.Decimal(10,2)
-  lastDate DateTime
+  lastDate DateTime @db.Date
   status MonthlyMessBillStatusEnum @default(DRAFT)
 
   hostelId Int
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
   hostel Hostel @relation(fields: [hostelId], references: [id])
 
@@ -292,7 +295,7 @@ model MessFeePayment {
   id Int @id @default(autoincrement())
   monthlyMessBillId Int
   studentProfileId Int
-  paidAt DateTime @default(now())
+  paidAt DateTime @default(now()) @db.Timestamptz(3)
 
   monthlyMessBill MonthlyMessBill @relation(fields: [monthlyMessBillId], references: [id])
   student StudentProfile @relation(fields: [studentProfileId], references: [id])

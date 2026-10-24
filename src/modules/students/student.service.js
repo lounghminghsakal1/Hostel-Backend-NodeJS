@@ -7,6 +7,7 @@ import { getS3SignedUrlByKey } from "../../utils/helper-functions.utils.js";
 import { generateActivationToken, getHashedVersionOfToken } from "../../utils/activation-token.utils.js";
 import sendEmail from "../../services/email.service.js";
 import { getHasedVersionOfPassword } from "../../utils/password.utils.js";
+import { buildMeta, toPrismaPagination } from "../../utils/pagination.utils.js";
 
 const createStudent = async (studentRequestBody, accessContext) => {
   const {
@@ -94,8 +95,27 @@ const createStudent = async (studentRequestBody, accessContext) => {
 };
 
 
-const getAllStudentProfiles = async (accessContext) => {
-  return await StudentRepository.getAllStudentProfiles(accessContext.loggedInAdminHostelId, accessContext.loggedInAdminCollegeId);
+const getAllStudentProfiles = async (accessContext, getStudentsQuery) => {
+  const {
+    by_student_name,
+    by_roll_number,
+    by_department_id,
+    by_room_id,
+    page, pageSize
+  } = getStudentsQuery;
+
+  const studentsWhere = {hostelId: accessContext.loggedInAdminHostelId};
+  if(by_student_name?.trim()) studentsWhere.studentName = {contains: by_student_name.trim(), mode: "insensitive"};
+  if(by_roll_number?.trim()) studentsWhere.rollNumber = by_roll_number.trim();
+  if(by_department_id > 0) studentsWhere.departmentId = by_department_id;
+  if(by_room_id > 0) studentsWhere.roomId = by_room_id;
+
+  const prismaPagination = toPrismaPagination(page, pageSize);
+
+  const {students, studentsCount} =  await StudentRepository.getAllStudentProfiles(studentsWhere, prismaPagination.skip, prismaPagination.take);
+
+  const paginationMeta = buildMeta(page, pageSize, studentsCount);
+  return {students, paginationMeta};
 };
 
 const getOneStudentProfileById = async (id, accessContext) => {

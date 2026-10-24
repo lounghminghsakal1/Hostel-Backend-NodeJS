@@ -10,8 +10,8 @@ const createRoom = async (req, res) => {
 
 const getRooms = async (req, res) => {
   const accessContext = getAccessContext(req);
-  const allRooms = await RoomsService.getRooms(accessContext);
-  Responses.successResponse(res, "All rooms fetched successfully", allRooms);
+  const {rooms, paginationMeta} = await RoomsService.getRooms(accessContext, req.validatedQuery);
+  Responses.paginatedResponse(res, "All rooms fetched successfully", rooms, {meta: paginationMeta });
 };
 
 const getOneRoom = async (req, res) => {

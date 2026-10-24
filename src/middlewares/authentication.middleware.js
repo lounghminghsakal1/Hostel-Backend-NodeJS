@@ -27,12 +27,18 @@ const authenticateUserMiddleware = async (req, res, next) => {
         },
         hostelAdminProfile: {
           select: {
+            id: true,
             hostelId: true,
             collegeId: true
           }
         },
-        studentProfile: true,
-        collegeId: true
+        studentProfile: {
+          select: {
+            id: true,
+            hostelId: true,
+            collegeId: true
+          }
+        },
       }
     });
 
