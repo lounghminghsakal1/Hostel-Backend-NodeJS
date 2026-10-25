@@ -11,7 +11,7 @@ const createStudent = async (req, res, next) => {
 const getAllStudentProfiles = async (req, res) => {
   const accessContext = getAccessContext(req);
   const {students, paginationMeta} = await StudentService.getAllStudentProfiles(accessContext, req.validatedQuery);
-  return Responses.paginatedResponse(res, "All student profiles fetched successfully", students, {meta: paginationMeta});
+  return Responses.paginatedResponse(res, "All student profiles fetched successfully", students, paginationMeta);
 };
 
 const getOneStudentProfile = async (req, res) => {

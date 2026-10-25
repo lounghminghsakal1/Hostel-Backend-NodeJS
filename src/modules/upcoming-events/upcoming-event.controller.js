@@ -18,7 +18,7 @@ const updateUpcomingEvent = async (req, res) => {
 const getAllUpcomingEvents = async (req, res) => {
   const accessContext = getAccessContext(req);
   const {allUpcomingEvents, paginationMeta} = await UpcomingEventsService.getAllUpcomingEvents(accessContext, req.validatedQuery);
-  return Responses.paginatedResponse(res, "All upcoming events fetched successfully", allUpcomingEvents, {meta: paginationMeta});
+  return Responses.paginatedResponse(res, "All upcoming events fetched successfully", allUpcomingEvents, paginationMeta);
 };
 
 const getOneUpcomingEvent = async (req, res) => {

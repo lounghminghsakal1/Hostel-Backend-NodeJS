@@ -17,7 +17,7 @@ const updateLeaveApplication = async (req, res) => {
 const getAllLeaveApplications= async (req, res) => {
   const accessContext = getAccessContext(req);
   const {allLeaveApplications, statusesCount, paginationMeta} = await LeaveApplicationService.getAllLeaveApplications(accessContext, req.validatedQuery);
-  return Responses.paginatedResponse(res, "All leave applications fetched successfully", {leaveApplications: allLeaveApplications, statusesCount}, {meta: paginationMeta});
+  return Responses.paginatedResponse(res, "All leave applications fetched successfully", {leaveApplications: allLeaveApplications, statusesCount}, paginationMeta);
 };
 
 const getOneLeaveApplication = async (req, res) => {
