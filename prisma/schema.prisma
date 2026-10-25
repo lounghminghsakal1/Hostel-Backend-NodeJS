@@ -318,14 +318,14 @@ model Announcement {
   description      String
   linkUrl          String?
   status           AnnouncementStatusEnum @default(ACTIVE)
-  startDate        DateTime
-  endDate          DateTime
+  startDate        DateTime @db.Date
+  endDate          DateTime @db.Date
   announcementType AnnouncementTypeEnum @default(OTHER)
   isImportant      Boolean  @default(false)
   pushNotification Boolean  @default(false)
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
 
   hostelId Int
 

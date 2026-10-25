@@ -40,14 +40,17 @@ const deleteAnnouncement = async (id) => {
   return announcement;
 };
 
-const getAnnouncements = async (hostelId) => {
+const getAnnouncements = async (announcementsWhere, skip, take) => {
   const announcements = await prisma.announcement.findMany({
-    where: {
-      hostelId
-    },
+    where: announcementsWhere,
+    skip, take
   });
 
-  return announcements;
+  const totalAnnouncementsCount = await prisma.announcement.count({
+    where: announcementsWhere
+  });
+
+  return {announcements, totalAnnouncementsCount};
 };
 
 const AnnouncementRepository = {

@@ -11,9 +11,9 @@ const createAnnouncement = async (req, res) => {
 
 const getAnnouncements = async (req, res) => {
   const accessContext = getAccessContext(req);
-  const announcements = await AnnouncementService.getAnnouncements(accessContext);
+  const {announcements, paginationMeta} = await AnnouncementService.getAnnouncements(accessContext, req.validatedQuery);
 
-  return Responses.successResponse(res, "All announcements fetched successfully", announcements);
+  return Responses.paginatedResponse(res, "All announcements fetched successfully", announcements, paginationMeta);
 };
 
 const getAnnouncementById = async (req, res) => {

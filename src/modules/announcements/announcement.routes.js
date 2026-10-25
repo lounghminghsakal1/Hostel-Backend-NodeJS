@@ -3,7 +3,7 @@ import AnnouncementController from "./announcement.controller.js";
 import authenticateUserMiddleware from "../../middlewares/authentication.middleware.js";
 import authorizeUserMiddleware from "../../middlewares/authorization.middleware.js";
 import validateRequestMiddleware from "../../middlewares/validate-request.middleware.js";
-import { createAnnouncementRequestBodySchema, updateAnnouncementRequestBodySchema } from "./announcement.request-schema.js";
+import { createAnnouncementRequestBodySchema, getAnnouncementRequestQuerySchema, updateAnnouncementRequestBodySchema } from "./announcement.request-schema.js";
 
 const router = express.Router();
 
@@ -12,7 +12,7 @@ const studentRole = "STUDENT";
 
 router.post("/", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware({body: createAnnouncementRequestBodySchema}), AnnouncementController.createAnnouncement);
 
-router.get("/", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), AnnouncementController.getAnnouncements);
+router.get("/", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware({query: getAnnouncementRequestQuerySchema}) ,AnnouncementController.getAnnouncements);
 
 router.get("/:id", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), AnnouncementController.getAnnouncementById);
 
