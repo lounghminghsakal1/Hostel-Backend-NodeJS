@@ -186,12 +186,14 @@ const getAttendanceRecords = async (accessContext, attendanceQuery) => {
   //records based on present or absent
   let records;
   let totalCount;
+  let percentage;
 
   if (status === "absent") {
     const datesList = getDatesListBetween(startDate, endDate);
     const { dbRecords, dbTotalCount } = await AttendanceRecordRepository.getAbsentStudentsRecord(hostelId, datesList, studentWhere, prismaPagination.skip, prismaPagination.take);
     records = dbRecords;
     totalCount = dbTotalCount;
+    percentage = Math.round((dbRecords.length / dbTotalCount) * 100);
   } else {
     [records, totalCount] = await Promise.all(
       [
@@ -199,6 +201,7 @@ const getAttendanceRecords = async (accessContext, attendanceQuery) => {
         AttendanceRecordRepository.getTotalCountOfAttendanceRecordPresent(attendanceWhere)
       ]
     );
+    percentage = Math.round((records.length / totalCount) * 100);
   }
 
   // get Summary 
@@ -216,7 +219,8 @@ const getAttendanceRecords = async (accessContext, attendanceQuery) => {
         totalStudentsWithatleastOnePresentDuringDateFilter,
         completelyAbsentStudentsCountDuringDates
       },
-      attendanceRecords: records
+      attendanceRecords: records,
+      percentage
     },
     paginationMeta
   };
