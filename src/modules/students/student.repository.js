@@ -144,14 +144,14 @@ const findStudentProfileById = async (id, hostelId, collegeId) => {
     },
     include: {
       user: true,
-      room:true
+      room: true
     }
   });
   return studentProfile;
 };
 
 const updateStudentProfile = async (tx, id, studentName, contactNumber, parentMobileNumber, departmentId, roomId, studentImageKey) => {
-  
+
   return tx.studentProfile.update({
     where: {
       id: id
@@ -190,7 +190,7 @@ const updateStatusOfStudent = async (userId, status) => {
 const updateRoomOfThestudent = async (studentId, roomId) => {
   return await prisma.studentProfile.update({
     where: {
-      id: studentId 
+      id: studentId
     },
     data: {
       roomId: roomId
@@ -279,6 +279,44 @@ const getAllDepartments = async (collegeId) => {
   });
 };
 
+const getAnnouncementsData = async (hostelId) => {
+  const today = new Date(`${currentDate()}T00:00:00.000Z`);
+
+  return await prisma.announcement.findMany({
+    where: {
+      hostelId: hostelId,
+      status: "ACTIVE",
+      startDate: {
+        lte: today
+      },
+      endDate: {
+        gte: today
+      }
+    },
+    take: 5,
+    orderBy: {
+      isImportant: "desc"
+    }
+  });
+};
+
+const getUpcomingEventsData = async (hostelId) => {
+  return await prisma.upcomingEvent.findMany({
+    where: {
+      hostelId,
+      isActive: true,
+      endingAt: {
+        gte: new Date()
+      }
+    },
+    orderBy: [
+      { startingAt: "asc" },
+      { id: "asc" }
+    ],
+    take: 5,
+  });
+};
+
 const StudentRepository = {
   findUserByEmail,
   findStudentProfileByContactNumber,
@@ -303,6 +341,8 @@ const StudentRepository = {
   setupNewPasswordToUser,
   updatedAccountSetupTokenRecord,
   getAllDepartments,
+  getAnnouncementsData,
+  getUpcomingEventsData,
 };
 
 export default StudentRepository;

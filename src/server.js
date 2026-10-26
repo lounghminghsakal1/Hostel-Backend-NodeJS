@@ -1,4 +1,4 @@
-import { connectDB } from "./configs/db.js";
+import { connectDB } from "./configs/db.js";  
 import envValues from "./configs/envFile.js";
 
 export default async function startServerAndConnectDB(app) {
