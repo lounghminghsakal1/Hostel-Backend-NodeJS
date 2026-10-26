@@ -23,7 +23,7 @@ const getAnnouncements = async (accessContext, getAnnouncementsQuery) => {
     page, pageSize
   } = getAnnouncementsQuery;
 
-  const announcementsWhere = { hostelId: accessContext.loggedInAdminHostelId };
+  const announcementsWhere = { hostelId: accessContext.loggedInAdminHostelId ?? accessContext.loggedInStudentHostelId };
   if (by_announcement_title?.trim()) announcementsWhere.title = { contains: by_announcement_title.trim(), mode: "insensitive" };
   if (by_status?.trim()) announcementsWhere.status = by_status.trim();
   if (by_announcement_type?.trim()) announcementsWhere.announcementType = by_announcement_type.trim();

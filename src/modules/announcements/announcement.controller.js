@@ -20,7 +20,8 @@ const getAnnouncementById = async (req, res) => {
   const accessContext = getAccessContext(req);
   const id = Number(req.params.id);
 
-  const announcement = await AnnouncementService.getAnnouncementById(id, accessContext.loggedInAdminHostelId);
+  const hostelId = accessContext.loggedInAdminHostelId ?? accessContext.loggedInStudentHostelId;
+  const announcement = await AnnouncementService.getAnnouncementById(id, hostelId);
 
   return Responses.successResponse(res, "Announcement fetched successfully", announcement);
 };
