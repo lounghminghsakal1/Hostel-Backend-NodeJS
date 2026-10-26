@@ -215,7 +215,7 @@ const changeOrAssignStudentRoom = async (studentId, roomId, accessContext) => {
 
 };
 
-const getStudentHomeScreenData = async (accessContext) => {
+const getStudentSplashScreenData = async (accessContext) => {
   //In home screen , Mark attendance button will be shown only when the corressponding hostel's attendance marking time is achieved so checking the current time is equal or more than that and within end time also
   const hostel = await StudentRepository.getHostelOftheStudent(accessContext.loggedInStudentHostelId);
   if (!hostel) { }
@@ -234,11 +234,14 @@ const getStudentHomeScreenData = async (accessContext) => {
     canMarkAttendance = true; // canMarkAttendance = false; (false is correct but i commented it for testing purpose)
   }
 
-  let announcementsData = [];
-
+  const announcementsData = await StudentRepository.getAnnouncementsData(accessContext.loggedInStudentHostelId);
+  const upcomingEventsData = await StudentRepository.getUpcomingEventsData(accessContext.loggedInStudentHostelId);
+ 
   return {
     canMarkAttendance,
-    announcementsData
+    announcements: announcementsData,
+    upcomingEvents: upcomingEventsData,
+    hostel
   };
 
 };
@@ -350,7 +353,7 @@ const StudentService = {
   updateStudentProfile,
   updateStatusOfStudent,
   changeOrAssignStudentRoom,
-  getStudentHomeScreenData,
+  getStudentSplashScreenData,
   setupNewPassword,
   getAllDepartments,
   sendActivationLinkMail,

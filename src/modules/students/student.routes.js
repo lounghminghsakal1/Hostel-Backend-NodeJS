@@ -17,7 +17,7 @@ studentRouter.get("/", authenticateUserMiddleware, authorizeUserMiddleware(hoste
 
 // IMPORTANT: specific/static routes first, if not then /home matches other route by mistake like /:id can be matched so put static routes first (i am debugging this for 30mins and finally found and learnt a new thing now)
 //student flow home screen data
-studentRouter.get("/home", authenticateUserMiddleware, authorizeUserMiddleware(studentRole), StudentController.getStudentHomeScreenData);
+studentRouter.get("/splash_screen", authenticateUserMiddleware, authorizeUserMiddleware(studentRole), StudentController.getStudentSplashScreenData);
 
 studentRouter.get("/departments", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), StudentController.getAllDepartments);
 
