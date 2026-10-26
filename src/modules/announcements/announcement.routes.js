@@ -12,9 +12,9 @@ const studentRole = "STUDENT";
 
 router.post("/", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware({body: createAnnouncementRequestBodySchema}), AnnouncementController.createAnnouncement);
 
-router.get("/", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware({query: getAnnouncementRequestQuerySchema}) ,AnnouncementController.getAnnouncements);
+router.get("/", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole, studentRole), validateRequestMiddleware({query: getAnnouncementRequestQuerySchema}) ,AnnouncementController.getAnnouncements);
 
-router.get("/:id", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), AnnouncementController.getAnnouncementById);
+router.get("/:id", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole, studentRole), AnnouncementController.getAnnouncementById);
 
 router.patch("/:id", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware({body: updateAnnouncementRequestBodySchema}) ,AnnouncementController.updateAnnouncement);
 
