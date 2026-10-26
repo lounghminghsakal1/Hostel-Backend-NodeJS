@@ -1,4 +1,7 @@
 //"en-GB" is for formatting , here en-GB is refering british format because they represent time in 24 hour format and dd/mm/yyyy format
+
+import z from "zod";
+
 ////this is just a formatter like i want this format of time, this format of date that's all
 const kolkataTimeFormatter = new Intl.DateTimeFormat("en-GB", {
   timeZone: "Asia/Kolkata",
@@ -51,3 +54,9 @@ export const getDatesListBetween = (startDate, endDate) => {
 
   return dates;
 };
+
+
+export const utcInstantSchema = z.iso.datetime({ precision: 3}).transform(value => new Date(value));
+
+// Validate calendar-date payloads and provide the Date objects Prisma expects.
+export const calendarDateSchema = z.iso.date().transform(value => new Date(`${value}T00:00:00.000Z`));

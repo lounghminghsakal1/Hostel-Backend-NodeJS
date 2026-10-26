@@ -33,6 +33,13 @@ const getAttendanceRecordsPresent = async (attendanceWhere, skip, take) => {
           studentName: true,
           rollNumber: true,
           studentImageKey: true,
+          contactNumber: true,
+          parentMobileNumber: true,
+          department: {
+            select: {
+              departmentName: true
+            }
+          },
           room: {
             select: {
               roomNumber: true
@@ -53,11 +60,9 @@ const getTotalCountOfAttendanceRecordPresent = async (attendanceWhere) => {
   });
 };
 
-const getTotalOfStudentsOfHostel = async (hostelId) => {
+const getTotalOfStudentsOfHostel = async (studentWhere) => {
   return await prisma.studentProfile.count({
-    where: {
-      hostelId: hostelId
-    }
+    where: studentWhere
   });
 };
 
@@ -73,11 +78,9 @@ const getTotalOfStudentsWithAtleastOnePresentDuringRange = async (attendanceWher
   return students.length;
 };
 
-const getAbsentStudentsRecord = async (hostelId, expectedDates, skip, take) => {
+const getAbsentStudentsRecord = async (hostelId, expectedDates, studentWhere ,skip, take) => {
   const students = await prisma.studentProfile.findMany({
-    where: {
-      hostelId
-    },
+    where: studentWhere,
     include: {
       attendanceRecords: {
         select: {
@@ -109,7 +112,7 @@ const getAbsentStudentsRecord = async (hostelId, expectedDates, skip, take) => {
         studentName: student.studentName,
         rollNumber: student.rollNumber,
         contactNumber: student.contactNumber,
-        roomNumber: student?.room.roomNumber ?? null,
+        roomNumber: student?.room?.roomNumber ?? null,
         department: student.department.departmentName,
         parentMobileNumber: student.parentMobileNumber,
         studentImageKey: student.studentImageKey,

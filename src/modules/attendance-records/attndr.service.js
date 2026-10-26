@@ -30,7 +30,7 @@ const markAttendance = async (accessContext, markAttendanceRequestBody) => {
   const student = await AttendanceRecordRepository.findStudentProfileById(accessContext.loggedInStudentProfileId);
 
   if (!student.studentImageKey) {
-    throw createHttpError(409, "Student image is not uploaded yet, ask your hostel manager for details", {errors: "Student's image not uploaded"});
+    throw createHttpError(409, "Student image is not uploaded yet, ask your hostel manager for details", { errors: "Student's image not uploaded" });
   }
 
   //check whether face verfication server(python fast api server is running or not)
@@ -45,7 +45,7 @@ const markAttendance = async (accessContext, markAttendanceRequestBody) => {
     throw createHttpError(500, "Face verification python fast api server is not running", { errors: "Python fast api - Face verification server error" });
   }
 
-  const resultOfFaceVerification= await fetch("http://127.0.0.1:8000/face/verify", {
+  const resultOfFaceVerification = await fetch("http://127.0.0.1:8000/face/verify", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -108,10 +108,17 @@ const getAttendanceRecords = async (accessContext, attendanceQuery) => {
     fromDate,
     toDate,
     status = "present",
+    by_student_name,
+    by_student_department_id,
+    by_student_room_id,
+    by_roll_number,
+    by_face_matching_percentage,
+    face_matching_operator,
+    is_outside_hostel,
     page,
     pageSize
   } = attendanceQuery;
-  
+
   //query validations
   if (date && (fromDate || toDate)) throw createHttpError(422, "Both date filter and range filter cannot exist simultaneously", { errors: "Invalid date filters" });
   if ((fromDate || toDate) && ((fromDate && !toDate) || (!fromDate && toDate))) throw createHttpError(422, "Both fromDate and toDate is required for range date filter", { errors: "Invalid date filters" });
@@ -136,13 +143,41 @@ const getAttendanceRecords = async (accessContext, attendanceQuery) => {
     }
   };
 
+  if(Number(by_face_matching_percentage) >= 0 && Number(by_face_matching_percentage) <= 100) {
+    attendanceWhere.faceMatchingPercentage = {
+      [face_matching_operator] : by_face_matching_percentage
+    }
+  }
+
+  if(is_outside_hostel) {
+    attendanceWhere.isLocatedWithinHostelRadius = !is_outside_hostel;
+  }
+
   //attaching hostel scope to attendanceWhere
   const hostelId = accessContext.loggedInAdminHostelId;
+  let studentWhere = { hostelId };
+  if(by_student_name?.trim()) {
+    studentWhere.studentName = {
+      contains: by_student_name.trim(),
+      mode: "insensitive"
+    }
+  }
+  if(by_roll_number?.trim()) {
+    studentWhere.rollNumber = {
+      equals: by_roll_number.trim()
+    }
+  }
+  if(Number(by_student_department_id) > 0) {
+    studentWhere.departmentId = by_student_department_id
+    
+  }
+  if(Number(by_student_room_id) > 0) {
+    studentWhere.roomId = by_student_room_id
+  }
+
   attendanceWhere = {
     ...attendanceWhere,
-    student: {
-      hostelId: hostelId
-    }
+    student: studentWhere
   }
 
   //get prisma pagination to query in database
@@ -154,7 +189,7 @@ const getAttendanceRecords = async (accessContext, attendanceQuery) => {
 
   if (status === "absent") {
     const datesList = getDatesListBetween(startDate, endDate);
-    const { dbRecords, dbTotalCount } = await AttendanceRecordRepository.getAbsentStudentsRecord(hostelId, datesList, prismaPagination.skip, prismaPagination.take);
+    const { dbRecords, dbTotalCount } = await AttendanceRecordRepository.getAbsentStudentsRecord(hostelId, datesList, studentWhere, prismaPagination.skip, prismaPagination.take);
     records = dbRecords;
     totalCount = dbTotalCount;
   } else {
@@ -167,7 +202,7 @@ const getAttendanceRecords = async (accessContext, attendanceQuery) => {
   }
 
   // get Summary 
-  const totalStudentsOfTheHostel = await AttendanceRecordRepository.getTotalOfStudentsOfHostel(hostelId);
+  const totalStudentsOfTheHostel = await AttendanceRecordRepository.getTotalOfStudentsOfHostel(studentWhere);
   const totalStudentsWithatleastOnePresentDuringDateFilter = await AttendanceRecordRepository.getTotalOfStudentsWithAtleastOnePresentDuringRange(attendanceWhere);
   const completelyAbsentStudentsCountDuringDates = totalStudentsOfTheHostel - totalStudentsWithatleastOnePresentDuringDateFilter;
 

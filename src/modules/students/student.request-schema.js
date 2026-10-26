@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paginationQuerySchema } from "../../utils/pagination.utils.js";
 
 export const createStudentProfileRequestBodySchema = z.object({
   email: z.email(),
@@ -34,4 +35,11 @@ export const sendActivationLinkMailRequestQuerySchema = z.object({
 
 export const forgotPasswordRequestBodySchema = z.object({
   email: z.email()
+});
+
+export const getStudentsQuerySchema = paginationQuerySchema.extend({
+  by_student_name: z.string().optional(),
+  by_department_id: z.coerce.number().int().min(1).optional(),
+  by_room_id: z.coerce.number().int().min(1).optional(),
+  by_roll_number: z.string().optional(),
 });

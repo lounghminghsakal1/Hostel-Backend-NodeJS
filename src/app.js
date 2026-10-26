@@ -34,7 +34,7 @@ app.use(cors({
 
 app.use(`${prefix_api}/auth`, authRouter);
 
-app.use(`${prefix_api}/hostel_admins`, hostelAdminRouter);
+app.use(`${prefix_api}/hostel_admin`, hostelAdminRouter);
 
 app.use(`${prefix_api}/students`, studentRouter);
 

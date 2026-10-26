@@ -80,12 +80,10 @@ async function main() {
         roomNumber: "NH-3-118",
       }
     },
-    update: {
-      capacity: 10
-    },
+    update: {},
     create: {
       roomNumber: "NH-3-118",
-      capacity: 5,
+      capacity: 10,
       hostelId: hostel.id
     }
   });

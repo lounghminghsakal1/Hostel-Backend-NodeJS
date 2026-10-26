@@ -61,13 +61,32 @@ const updateLeaveApplication = async (id, leaveReason, fromDate, toDate) => {
   });
 };
 
-const getAllLeaveApplications = async (hostelId) => {
+const getAllLeaveApplications = async (leaveApplicationWhere, skip, take) => {
   return await prisma.leaveApplication.findMany({
-    where: {
+    where: leaveApplicationWhere,
+    include: {
       student: {
-        hostelId: hostelId
+        select: {
+          studentName: true,
+          contactNumber: true,
+          parentMobileNumber: true,
+          rollNumber: true,
+          studentImageKey: true,
+          department: {
+            select: {
+              departmentName: true
+            }
+          },
+          room: {
+            select: {
+              roomNumber: true
+            }
+          }
+        }
       }
-    }
+    },
+    skip,
+    take
   });
 };
 
@@ -122,6 +141,34 @@ const getOneStudentOneLeaveApplication = async (studentProfileId, leaveApplicati
   });
 };
 
+const getTotalLeaveApplicationCount = async (leaveApplicationWhere) => {
+  return await prisma.leaveApplication.count({
+    where: leaveApplicationWhere
+  });
+};
+
+const getCountOfStatuses = async (statusesWhere) => {
+  const groups = await prisma.leaveApplication.groupBy({
+    by: ["status"],
+    where: statusesWhere,
+    _count: {
+      _all: true
+    }
+  });
+
+  const counts = {
+    WAITING_FOR_APPROVAL: 0,
+    APPROVED: 0,
+    REJECTED: 0,
+    CANCELLED: 0
+  }; 
+
+  for(const group of groups) {
+    counts[group.status] = group._count._all
+  }
+  return counts;
+};
+
 const LeaveApplicationRepository = {
   findLeaveApplicationOdStudentByStudentIdWithStatusAsWaiting,
   findLeaveApplicationOfStudentWithOverLappingTimePeriodAndApproved,
@@ -134,6 +181,8 @@ const LeaveApplicationRepository = {
   cancelLeaveApplication,
   getOneStudentLeaveApplications,
   getOneStudentOneLeaveApplication,
+  getTotalLeaveApplicationCount,
+  getCountOfStatuses
 };
 
 export default LeaveApplicationRepository;

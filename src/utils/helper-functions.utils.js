@@ -10,7 +10,8 @@ export const getAccessContext = (req) => {
     loggedInStudentHostelId: req.user?.studentProfile?.hostelId ?? null,
     loggedInStudentCollegeId: req.user?.studentProfile?.collegeId ?? null,
 
-    loggedInStudentProfileId: req.user?.studentProfile?.id ?? null
+    loggedInStudentProfileId: req.user?.studentProfile?.id ?? null,
+    loggedInHostelAdminProfileId: req.user?.hostelAdminProfile?.id ?? null
   };
 };
 

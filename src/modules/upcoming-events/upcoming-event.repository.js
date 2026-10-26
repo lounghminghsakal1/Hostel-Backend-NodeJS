@@ -44,11 +44,15 @@ const updateUpcomingEvent = async (id, eventName, eventDescription, startingAt, 
   });
 };
 
-const getAllUpcomingEvents = async (hostelId) => {
+const getAllUpcomingEvents = async (upcomingEventsWhere) => {
   return await prisma.upcomingEvent.findMany({
-    where: {
-      hostelId: hostelId
-    }
+    where: upcomingEventsWhere
+  });
+};
+
+const getTotoalOfUpcomingEvents = async (upcomingEventsWhere) => {
+  return await prisma.upcomingEvent.count({
+    where: upcomingEventsWhere
   });
 };
 
@@ -56,7 +60,8 @@ const UpcomingEventsRepository = {
   createUpcomingEvent,
   findUpcomingEventById,
   updateUpcomingEvent,
-  getAllUpcomingEvents
+  getAllUpcomingEvents,
+  getTotoalOfUpcomingEvents
 };
 
 export default UpcomingEventsRepository;
