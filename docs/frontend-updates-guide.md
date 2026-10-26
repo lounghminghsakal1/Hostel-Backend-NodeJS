@@ -1,6 +1,8 @@
 # Frontend integration guide: dates, filters, and updated responses
 
-Updated: 25 October 2026. This guide describes the current repository code, not a verified deployed API. Examples use fictional data. Backend issues that affect integration are called out explicitly; this document does not imply they have been fixed.
+Updated: 26 October 2026. This guide describes the current repository code, not a verified deployed API. Examples use fictional data. Backend issues that affect integration are called out explicitly; this document does not imply they have been fixed.
+
+For the latest committed student splash response, announcements APIs, and attendance percentage addition, read [the 26 October frontend handoff](frontend-latest-changes-2026-10-26.md). It supplements this guide and documents the differences between `main` and `sharmi/annoucements`.
 
 ## 1. Connection and shared rules
 
@@ -17,6 +19,8 @@ GET filters belong in query parameters. For JSON bodies, also send `Content-Type
 | GET path | Allowed role | Purpose |
 | --- | --- | --- |
 | `/hostel_admin/splash_screen` | HOSTEL_ADMIN | Admin name, hostel name, college name |
+| `/students/splash_screen` | STUDENT | Attendance flag, announcements/event previews, hostel, and user; see latest handoff for the current backend blocker |
+| `/announcements` | HOSTEL_ADMIN or STUDENT | Announcement list and filters; see latest handoff |
 | `/attendance_records` | HOSTEL_ADMIN | Present attendance or absent students |
 | `/rooms` | HOSTEL_ADMIN | Room occupancy and vacancies |
 | `/leave_applications` | HOSTEL_ADMIN | Leave requests and status counts |
@@ -37,7 +41,7 @@ Hostel scope comes from the authenticated user. Do not send a hostel ID to selec
 
 ### Pagination
 
-All five listing APIs accept:
+All six listing APIs (including announcements) accept:
 
 | Parameter | Type on the wire | Frontend default | Rules |
 | --- | --- | --- | --- |

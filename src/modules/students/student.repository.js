@@ -1,4 +1,5 @@
 import { prisma } from "../../configs/db.js";
+import { currentDate } from "../../utils/dates.utils.js";
 
 const findUserByEmail = async (tx, email) => {
   const user = tx ? await tx.user.findUnique({
