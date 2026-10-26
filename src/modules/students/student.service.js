@@ -104,18 +104,18 @@ const getAllStudentProfiles = async (accessContext, getStudentsQuery) => {
     page, pageSize
   } = getStudentsQuery;
 
-  const studentsWhere = {hostelId: accessContext.loggedInAdminHostelId};
-  if(by_student_name?.trim()) studentsWhere.studentName = {contains: by_student_name.trim(), mode: "insensitive"};
-  if(by_roll_number?.trim()) studentsWhere.rollNumber = by_roll_number.trim();
-  if(by_department_id > 0) studentsWhere.departmentId = by_department_id;
-  if(by_room_id > 0) studentsWhere.roomId = by_room_id;
+  const studentsWhere = { hostelId: accessContext.loggedInAdminHostelId };
+  if (by_student_name?.trim()) studentsWhere.studentName = { contains: by_student_name.trim(), mode: "insensitive" };
+  if (by_roll_number?.trim()) studentsWhere.rollNumber = by_roll_number.trim();
+  if (by_department_id > 0) studentsWhere.departmentId = by_department_id;
+  if (by_room_id > 0) studentsWhere.roomId = by_room_id;
 
   const prismaPagination = toPrismaPagination(page, pageSize);
 
-  const {students, studentsCount} =  await StudentRepository.getAllStudentProfiles(studentsWhere, prismaPagination.skip, prismaPagination.take);
+  const { students, studentsCount } = await StudentRepository.getAllStudentProfiles(studentsWhere, prismaPagination.skip, prismaPagination.take);
 
   const paginationMeta = buildMeta(page, pageSize, studentsCount);
-  return {students, paginationMeta};
+  return { students, paginationMeta };
 };
 
 const getOneStudentProfileById = async (id, accessContext) => {
@@ -238,7 +238,9 @@ const changeOrAssignStudentRoom = async (studentId, roomId, accessContext) => {
 const getStudentSplashScreenData = async (accessContext) => {
   //In home screen , Mark attendance button will be shown only when the corressponding hostel's attendance marking time is achieved so checking the current time is equal or more than that and within end time also
   const hostel = await StudentRepository.getHostelOftheStudent(accessContext.loggedInStudentHostelId);
-  if (!hostel) { }
+  if (!hostel) {
+    throw createHttpError(404, "Hostel not found");
+  }
 
   //if current time lies btw attendance marking start and end time then canMarkAttendance is true
   let canMarkAttendance;
@@ -256,7 +258,7 @@ const getStudentSplashScreenData = async (accessContext) => {
 
   const announcementsData = await StudentRepository.getAnnouncementsData(accessContext.loggedInStudentHostelId);
   const upcomingEventsData = await StudentRepository.getUpcomingEventsData(accessContext.loggedInStudentHostelId);
- 
+
   return {
     canMarkAttendance,
     announcements: announcementsData,

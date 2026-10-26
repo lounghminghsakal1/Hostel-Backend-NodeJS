@@ -280,15 +280,17 @@ const getAllDepartments = async (collegeId) => {
 };
 
 const getAnnouncementsData = async (hostelId) => {
+  const today = new Date(`${currentDate()}T00:00:00.000Z`);
+
   return await prisma.announcement.findMany({
     where: {
       hostelId: hostelId,
       status: "ACTIVE",
       startDate: {
-        lte: new Date()
+        lte: today
       },
       endDate: {
-        gte: new Date()
+        gte: today
       }
     },
     take: 5,
