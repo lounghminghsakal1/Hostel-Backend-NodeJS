@@ -88,6 +88,7 @@ model Hostel {
   students StudentProfile[]
   upcomingEvents UpcomingEvent[]
   monthlyMessBills MonthlyMessBill[]
+  announcements Announcement[]
 
   @@unique([collegeId, hostelName])
 }
@@ -301,5 +302,36 @@ model MessFeePayment {
   student StudentProfile @relation(fields: [studentProfileId], references: [id])
 
   @@unique([monthlyMessBillId, studentProfileId])
+}
+
+enum AnnouncementStatusEnum {
+  ACTIVE
+  INACTIVE
+}
+
+enum AnnouncementTypeEnum {
+  COLLEGE_ANNOUNCEMENT
+  HOSTEL_ANNOUNCEMENT
+  OTHER
+}
+
+model Announcement {
+  id               Int      @id @default(autoincrement())
+  title            String
+  description      String
+  linkUrl          String?
+  status           AnnouncementStatusEnum @default(ACTIVE)
+  startDate        DateTime @db.Date
+  endDate          DateTime @db.Date
+  announcementType AnnouncementTypeEnum @default(OTHER)
+  isImportant      Boolean  @default(false)
+  pushNotification Boolean  @default(false)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @db.Timestamptz(3)
+
+  hostelId Int
+
+  hostel Hostel @relation(fields: [hostelId], references: [id])
 }
 

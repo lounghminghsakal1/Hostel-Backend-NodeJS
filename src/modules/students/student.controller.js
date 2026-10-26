@@ -38,10 +38,10 @@ const changeOrAssignStudentRoom = async (req, res) => {
   return Responses.successResponse(res, "Student room changed or assigned successfully", StudentProfile);
 };
 
-const getStudentHomeScreenData = async (req, res) => {
+const getStudentSplashScreenData = async (req, res) => {
   const accessContext = getAccessContext(req);
-  const homeScreenData = await StudentService.getStudentHomeScreenData(accessContext);
-  return Responses.successResponse(res, "Student home screen data fetched successfully", homeScreenData);
+  const splashScreenData = await StudentService.getStudentSplashScreenData(accessContext);
+  return Responses.successResponse(res, "Student home screen data fetched successfully", {...splashScreenData, user: req.user});
 }; 
 
 const setupNewPassword = async (req, res) => {
@@ -75,7 +75,7 @@ const StudentController = {
   updateStudentProfile,
   updateStatusOfStudent,
   changeOrAssignStudentRoom,
-  getStudentHomeScreenData,
+  getStudentSplashScreenData,
   setupNewPassword,
   getAllDepartments,
   sendActivationLinkMail,

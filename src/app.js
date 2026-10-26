@@ -15,6 +15,7 @@ import attendanceRecordsRouter from "./modules/attendance-records/attndr.routes.
 import upcomingEventsRouter from "./modules/upcoming-events/upcoming-events.routes.js";
 import MessFeeRouter from "./modules/mess-fees/mess-fee.routes.js";
 import cors from "cors";
+import announcementRouter from "./modules/announcements/announcement.routes.js";
 
 const app = express();
 
@@ -48,15 +49,18 @@ app.use(`${prefix_api}/media`, UploadDownloadRouter);
 const __fileName = fileURLToPath(import.meta.url);
 const __dirName = path.dirname(__fileName);
 
-app.use("/uploaded-files", express.static(path.join(__dirName, "../uploaded-files")));
+app.use(
+  "/uploaded-files",
+  express.static(path.join(__dirName, "../uploaded-files"))
+);
 
 app.use(`${prefix_api}/attendance_records`, attendanceRecordsRouter);
 
 app.use(`${prefix_api}/upcoming_events`, upcomingEventsRouter);
 
 app.use(`${prefix_api}/mess_fee`, MessFeeRouter);
+app.use(`${prefix_api}/announcements`, announcementRouter);
 
 app.use(gloabalErrorHandlerMiddleware);
-
 
 await startServerAndConnectDB(app);
