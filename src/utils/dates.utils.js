@@ -60,3 +60,18 @@ export const utcInstantSchema = z.iso.datetime({ precision: 3}).transform(value 
 
 // Validate calendar-date payloads and provide the Date objects Prisma expects.
 export const calendarDateSchema = z.iso.date().transform(value => new Date(`${value}T00:00:00.000Z`));
+
+export function subtractMonths(date, months) {
+  const result = new Date(date);
+  const currentDay = result.getDate();
+  
+  // Shift the month back
+  result.setMonth(result.getMonth() - months);
+  
+  // Check if the day shifted due to month length mismatches
+  if (result.getDate() !== currentDay) {
+    result.setDate(0); // Sets the date to the last day of the previous month
+  }
+  
+  return result;
+}

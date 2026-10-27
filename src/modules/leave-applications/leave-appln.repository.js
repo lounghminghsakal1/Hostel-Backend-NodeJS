@@ -1,4 +1,5 @@
 import { prisma } from "../../configs/db.js";
+import { subtractMonths } from "../../utils/dates.utils.js";
 
 const findLeaveApplicationOdStudentByStudentIdWithStatusAsWaiting = async (studentId) => {
   return await prisma.leaveApplication.findFirst({
@@ -169,6 +170,19 @@ const getCountOfStatuses = async (statusesWhere) => {
   return counts;
 };
 
+const previoudTwoMonthLeavesOfThatStudent = async (studentId) => {
+  const twoMonthsBeforeDate = subtractMonths(new Date(), 2);
+  
+  return await prisma.leaveApplication.findMany({
+    where: {
+      studentId: studentId,
+      fromDate: {
+        gte: twoMonthsBeforeDate
+      }
+    }
+  });
+};
+
 const LeaveApplicationRepository = {
   findLeaveApplicationOdStudentByStudentIdWithStatusAsWaiting,
   findLeaveApplicationOfStudentWithOverLappingTimePeriodAndApproved,
@@ -182,7 +196,8 @@ const LeaveApplicationRepository = {
   getOneStudentLeaveApplications,
   getOneStudentOneLeaveApplication,
   getTotalLeaveApplicationCount,
-  getCountOfStatuses
+  getCountOfStatuses,
+  previoudTwoMonthLeavesOfThatStudent
 };
 
 export default LeaveApplicationRepository;

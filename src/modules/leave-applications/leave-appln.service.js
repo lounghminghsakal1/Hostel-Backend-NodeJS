@@ -87,7 +87,11 @@ const getAllLeaveApplications = async (accessContext, getAllLeaveApplicationRequ
 const getOneLeaveApplication = async (accessContext, id) => {
   const leaveApplication = await LeaveApplicationRepository.getOneLeaveApplication(id, accessContext.loggedInAdminHostelId);
   if (!leaveApplication) throw createHttpError(404, `Leave application with id ${id} is not found`, { errors: "Invalid leave application id" });
-  return leaveApplication;
+  
+  //fetch that particular student's previous leave in last 2 months, if any 
+  const previoudTwoMonthLeavesOfThatStudent = await LeaveApplicationRepository.previoudTwoMonthLeavesOfThatStudent(leaveApplication.studentId);
+  
+  return {leaveApplication, previoudTwoMonthLeaveApplications: previoudTwoMonthLeavesOfThatStudent};
 };
 
 const reviewLeaveApplication = async (accessContext, leaveApplicationId, reviewLeaveApplicationRequestBody) => {

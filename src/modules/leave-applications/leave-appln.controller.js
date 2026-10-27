@@ -23,8 +23,8 @@ const getAllLeaveApplications= async (req, res) => {
 const getOneLeaveApplication = async (req, res) => {
   const accessContext = getAccessContext(req);
 
-  const leaveApplication = await LeaveApplicationService.getOneLeaveApplication(accessContext, Number(req.params.id));
-  return Responses.successResponse(res, "Leave application fetched successfully", leaveApplication);
+  const {leaveApplication, previoudTwoMonthLeaveApplications} = await LeaveApplicationService.getOneLeaveApplication(accessContext, Number(req.params.id));
+  return Responses.successResponse(res, "Leave application fetched successfully", {leaveApplication, previoudTwoMonthLeaveApplications});
 };
 
 const reviewLeaveApplication = async (req, res) => {
