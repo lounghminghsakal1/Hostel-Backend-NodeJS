@@ -21,7 +21,7 @@ studentRouter.get("/splash_screen", authenticateUserMiddleware, authorizeUserMid
 
 studentRouter.get("/departments", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), StudentController.getAllDepartments);
 
-studentRouter.get("/:id", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), StudentController.getOneStudentProfile);
+studentRouter.get("/:id", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole, studentRole), StudentController.getOneStudentProfile);
 
 studentRouter.patch("/:id", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware({body: updateStudentProfileRequestBodySchema}) ,StudentController.updateStudentProfile);
 

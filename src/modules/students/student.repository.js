@@ -116,6 +116,26 @@ const getOneStudentProfileById = async (id, hostelId, collegeId) => {
       id: id,
       hostelId: hostelId,
       collegeId: collegeId
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          email: true
+        }
+      },
+      room: {
+        select: {
+          id: true,
+          roomNumber: true
+        }
+      },
+      department: {
+        select: {
+          id: true,
+          departmentName: true
+        }
+      }, 
     }
   });
 };
