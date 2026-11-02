@@ -26,7 +26,9 @@ const createSession = async (userId) => {
   const generatedRefreshToken = crypto.randomBytes(32).toString("hex");
   const hashedRefreshToken = getHashedVersionOfToken(generatedRefreshToken);
 
+
   const result = await prisma.$transaction(async (tx) => {
+      console.log("HERE");
     //session creation
     const createdSession = await tx.authSession.create({
       data: {
@@ -34,6 +36,8 @@ const createSession = async (userId) => {
         expiresAt: sessionExpiry,
       }
     });
+
+    console.log("NOT HERE");
 
     //refresh token record creation
     const createdRefreshToken = await tx.refreshToken.create({
