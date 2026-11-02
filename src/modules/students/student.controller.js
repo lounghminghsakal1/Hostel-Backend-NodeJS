@@ -16,7 +16,7 @@ const getAllStudentProfiles = async (req, res) => {
 
 const getOneStudentProfile = async (req, res) => {
   const accessContext = getAccessContext(req);
-  const oneStudentProfile = await StudentService.getOneStudentProfileById(Number(req.params.id), accessContext);
+  const oneStudentProfile = await StudentService.getOneStudentProfileById(Number(req.params.id), req.user, accessContext);
   return Responses.successResponse(res, "Student fetched successfully", oneStudentProfile);
 };
 

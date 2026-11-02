@@ -18,7 +18,10 @@ export const getAllAttendanceRecordRequestQuerySchema = paginationQuerySchema.ex
   status: z.enum(["present", "absent"]).optional().default("present"),
   by_face_matching_percentage: z.coerce.number().min(0).max(100).optional(),
   face_matching_operator: z.enum(["gte", "lte"]).optional().default("lte"),
-  is_outide_hostel: z.coerce.boolean().optional()
+  is_outside_hostel: z
+    .enum(["true", "false"])
+    .transform(value => value === "true")
+    .optional()
 });
 
 const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;

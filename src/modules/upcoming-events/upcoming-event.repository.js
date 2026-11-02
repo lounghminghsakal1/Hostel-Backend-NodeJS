@@ -17,10 +17,11 @@ const createUpcomingEvent = async (eventName, eventDescription, startingAt, endi
   });
 };
 
-const findUpcomingEventById = async (id) => {
+const findUpcomingEventById = async (id, hostelId) => {
   return await prisma.upcomingEvent.findUnique({
     where: {
-      id
+      id,
+      hostelId
     }
   });
 }; 
@@ -44,9 +45,11 @@ const updateUpcomingEvent = async (id, eventName, eventDescription, startingAt, 
   });
 };
 
-const getAllUpcomingEvents = async (upcomingEventsWhere) => {
+const getAllUpcomingEvents = async (upcomingEventsWhere, skip,take) => {
   return await prisma.upcomingEvent.findMany({
-    where: upcomingEventsWhere
+    where: upcomingEventsWhere,
+    skip,
+    take
   });
 };
 

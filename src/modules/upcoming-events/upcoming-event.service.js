@@ -23,7 +23,7 @@ const createUpcomingEvent = async (accessContext, createUpcomingEventRequestBody
 };
 
 const updateUpcomingEvent = async (accessContext, id, updateUpcomingEventRequestBody) => {
-  const upcomingEvent = await UpcomingEventsRepository.findUpcomingEventById(id);
+  const upcomingEvent = await UpcomingEventsRepository.findUpcomingEventById(id, accessContext.loggedInAdminHostelId);
   if (!upcomingEvent) throw createHttpError(404, "Upcoming event with id " + id + " not found", { errors: "Invalid id" });
 
   const {
@@ -37,6 +37,22 @@ const updateUpcomingEvent = async (accessContext, id, updateUpcomingEventRequest
     contactPersonPhone,
     isActive
   } = updateUpcomingEventRequestBody;
+
+  if (startingAt > endingAt) throw createHttpError(422, "Starting at must be before than ending at", { errors: "Invalid date range" });
+
+  const nextStartingAt =
+    startingAt ?? upcomingEvent.startingAt;
+
+  const nextEndingAt =
+    endingAt ?? upcomingEvent.endingAt;
+
+  if (nextStartingAt > nextEndingAt) {
+    throw createHttpError(
+      422,
+      "startingAt must be before or equal to endingAt",
+      { errors: "Invalid event date range" }
+    );
+  }
 
   const hostelId = accessContext.loggedInAdminHostelId;
 
@@ -61,8 +77,15 @@ const getAllUpcomingEvents = async (accessContext, getUpcomingEventsQuery) => {
       mode: "insensitive"
     }
   }
-  if (is_active) upcomingEventsWhere.isActive = is_active;
-  if (from_date || to_date) {
+  if (is_active) {
+    upcomingEventsWhere.isActive = is_active;
+  }
+  if (!is_active) {
+    upcomingEventsWhere.isActive = is_active;
+  }
+  if (to_date && !from_date) throw createHttpError(422, "Provide both date filters or from date only which takes to date as today", { errors: "Invalid date filter query params" });
+
+  if (from_date) {
     const { startDate, endDate } = getDateRange(from_date, to_date);
     upcomingEventsWhere.startingAt = {
       gte: startDate
@@ -74,15 +97,16 @@ const getAllUpcomingEvents = async (accessContext, getUpcomingEventsQuery) => {
 
   const prismaPagination = toPrismaPagination(page, pageSize);
   // const hostelId = accessContext.loggedInAdminHostelId ?? accessContext.loggedInStudentHostelId;
-  const [allUpcomingEvents, totalCount] =  await Promise.all([UpcomingEventsRepository.getAllUpcomingEvents(upcomingEventsWhere, prismaPagination.skip, prismaPagination.take), UpcomingEventsRepository.getTotoalOfUpcomingEvents(upcomingEventsWhere)]);
+  const [allUpcomingEvents, totalCount] = await Promise.all([UpcomingEventsRepository.getAllUpcomingEvents(upcomingEventsWhere, prismaPagination.skip, prismaPagination.take), UpcomingEventsRepository.getTotoalOfUpcomingEvents(upcomingEventsWhere)]);
 
   const paginationMeta = buildMeta(page, pageSize, totalCount);
 
-  return {allUpcomingEvents, paginationMeta};
+  return { allUpcomingEvents, paginationMeta };
 };
 
 const getOneUpcomingEvent = async (accessContext, id) => {
-  const upcomingEvent = await UpcomingEventsRepository.findUpcomingEventById(id);
+  const hostelId = accessContext.loggedInAdminHostelId ?? accessContext.loggedInStudentHostelId;
+  const upcomingEvent = await UpcomingEventsRepository.findUpcomingEventById(id, hostelId);
   if (!upcomingEvent) throw createHttpError(404, "Upcoming event with id " + id + " not found", { errors: "Invalid id" });
   return upcomingEvent;
 };

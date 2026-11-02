@@ -1,0 +1,301 @@
+HOSTEL MANAGEMENT API - FRONTEND AUTHENTICATION INTEGRATION
+===========================================================
+
+API base path
+-------------
+All authentication endpoints use:
+
+  /api/v1/auth
+
+Authentication model
+--------------------
+The backend uses a short-lived access token and a rotating refresh token.
+
+  Access token lifetime:  15 minutes
+  Refresh/session lifetime: 7 days from login
+
+The access token is sent in the Authorization header when calling protected
+APIs. The refresh token is sent only to the refresh and logout APIs.
+
+Each login creates a separate session. Logout revokes only the session that
+issued the supplied access token and refresh token.
+
+
+1. LOGIN
+========
+
+Endpoint:
+
+  POST /api/v1/auth/login
+
+Headers:
+
+  Content-Type: application/json
+
+Request body:
+
+  {
+    "email": "student@example.com",
+    "password": "user-password"
+  }
+
+Successful response (HTTP 200):
+
+  {
+    "status": "success",
+    "message": "Logged in successful",
+    "data": {
+      "user": {
+        "id": 15,
+        "email": "student@example.com",
+        "status": "ACTIVE",
+        "role": "STUDENT"
+      },
+      "tokens": {
+        "accessToken": "<jwt-access-token>",
+        "refreshToken": "<refresh-token>"
+      }
+    },
+    "errors": null
+  }
+
+Frontend action after success:
+
+  1. Save data.user as the authenticated user.
+  2. Save data.tokens.accessToken.
+  3. Save data.tokens.refreshToken.
+  4. Send the access token with every protected API request.
+
+Protected request header:
+
+  Authorization: Bearer <accessToken>
+
+Do not send the refresh token in the Authorization header.
+
+
+2. REFRESH ACCESS AND REFRESH TOKENS
+===================================
+
+Endpoint:
+
+  POST /api/v1/auth/refresh
+
+Headers:
+
+  Content-Type: application/json
+
+The refresh endpoint does not require an Authorization header.
+
+Request body:
+
+  {
+    "refreshToken": "<currently-stored-refresh-token>"
+  }
+
+Successful response (HTTP 200):
+
+  {
+    "status": "success",
+    "message": "Tokens refreshed suceessfully",
+    "data": {
+      "accessToken": "<new-access-token>",
+      "refreshToken": "<new-refresh-token>"
+    },
+    "errors": null
+  }
+
+IMPORTANT - REFRESH TOKEN ROTATION
+----------------------------------
+On every successful refresh, the old refresh token is permanently consumed.
+The frontend MUST replace both stored tokens with the two new values returned
+by the API.
+
+Correct operation:
+
+  old access token  -> replace with data.accessToken
+  old refresh token -> replace with data.refreshToken
+
+Never continue using the previous refresh token after a successful refresh.
+Reusing it may cause the backend to treat the request as token theft and revoke
+the session.
+
+Only one refresh request should run at a time. If several API calls receive a
+401 simultaneously, they must share one refresh operation instead of each
+calling /refresh independently.
+
+Recommended frontend flow:
+
+  1. Call a protected API with the current access token.
+  2. If the response is 401 because the access token expired, start refresh.
+  3. If refresh is already running, wait for that same refresh promise.
+  4. Store both newly returned tokens.
+  5. Retry the original protected request once with the new access token.
+  6. Never retry refresh indefinitely.
+  7. If refresh fails, clear authentication state and show the login screen.
+
+Do not automatically refresh on 403. A 403 means the authenticated user is not
+allowed to perform the requested operation.
+
+Example refresh lock (JavaScript pseudocode):
+
+  let refreshPromise = null;
+
+  async function refreshTokens() {
+    if (!refreshPromise) {
+      refreshPromise = callRefreshApi(currentRefreshToken)
+        .then((response) => {
+          saveAccessToken(response.data.accessToken);
+          saveRefreshToken(response.data.refreshToken);
+          return response.data.accessToken;
+        })
+        .finally(() => {
+          refreshPromise = null;
+        });
+    }
+
+    return refreshPromise;
+  }
+
+
+3. LOGOUT
+=========
+
+Endpoint:
+
+  POST /api/v1/auth/logout
+
+Headers:
+
+  Content-Type: application/json
+  Authorization: Bearer <current-access-token>
+
+Request body:
+
+  {
+    "refreshToken": "<current-refresh-token>"
+  }
+
+The access token and refresh token must belong to the same login session.
+
+Successful response (HTTP 200):
+
+  {
+    "status": "success",
+    "message": "Logged out successfully",
+    "data": "Logged out successfully",
+    "errors": null
+  }
+
+Frontend action after logout:
+
+  1. Delete the access token.
+  2. Delete the refresh token.
+  3. Delete the authenticated user state.
+  4. Clear user-specific cached API data.
+  5. Navigate to the login screen.
+
+If logout fails because the local tokens are already invalid or expired, clear
+the local authentication state anyway. Do not keep a user logged into the UI
+only because the server logout request failed.
+
+If the access token has expired but the refresh token is still valid, the
+frontend may refresh once and then call logout using the newly returned token
+pair.
+
+
+4. FAILURE RESPONSE FORMAT
+==========================
+
+Authentication failures use this general format:
+
+  {
+    "status": "failure",
+    "message": "Human-readable error message",
+    "data": null,
+    "errors": "Error details"
+  }
+
+Frontend handling by HTTP status:
+
+  400 - Invalid request or malformed Authorization header.
+  401 - Missing/expired/invalid authentication or inactive account.
+        Attempt refresh only when handling an expired access token on a
+        protected API. If refresh itself returns 401, log out locally.
+  403 - Authenticated but forbidden, or logout tokens are from different
+        users/sessions. Do not automatically refresh.
+  409 - Refresh token/session is expired, revoked, or already used. Clear the
+        token state and require a new login.
+  422 - Validation failed or the refresh token could not be found. Clear the
+        token state when this is returned by refresh/logout.
+  500 - Server error. Show a retry message, but do not run an infinite refresh
+        loop.
+
+
+5. TOKEN STORAGE GUIDANCE
+=========================
+
+Preferred browser architecture:
+
+  - Store the refresh token in a Secure, HttpOnly, SameSite cookie through a
+    trusted backend-for-frontend (BFF).
+  - Keep the access token in memory where practical.
+
+If the frontend must store the tokens itself because the current API returns
+them in JSON:
+
+  - Avoid exposing tokens through logs, analytics, URLs, query parameters, or
+    error-reporting tools.
+  - Never store tokens in Redux/React debugging output in production.
+  - Understand that localStorage and ordinary JavaScript-readable cookies are
+    accessible to injected JavaScript if the application has an XSS flaw.
+  - Clear both tokens together whenever authentication becomes invalid.
+
+Never use decoded JWT fields as proof of authorization. They may be used for
+display hints, but the backend remains the authority for role and access
+decisions.
+
+
+6. FRONTEND AUTH STATE SUMMARY
+==============================
+
+Logged out:
+
+  accessToken  = null
+  refreshToken = null
+  user         = null
+
+Logged in:
+
+  accessToken  = login.data.tokens.accessToken
+  refreshToken = login.data.tokens.refreshToken
+  user         = login.data.user
+
+After refresh:
+
+  accessToken  = refresh.data.accessToken
+  refreshToken = refresh.data.refreshToken
+  user         = existing user state
+
+After logout or unrecoverable refresh failure:
+
+  accessToken  = null
+  refreshToken = null
+  user         = null
+
+
+7. INTEGRATION CHECKLIST
+========================
+
+  [ ] Login stores both accessToken and refreshToken.
+  [ ] Protected requests send Authorization: Bearer <accessToken>.
+  [ ] Refresh sends only the current refreshToken in the JSON body.
+  [ ] A successful refresh replaces BOTH old tokens.
+  [ ] Only one refresh request can run at a time.
+  [ ] Failed API requests are retried at most once after refresh.
+  [ ] A 403 response does not trigger token refresh.
+  [ ] Refresh failure clears all local authentication state.
+  [ ] Logout sends matching access and refresh tokens.
+  [ ] Logout clears local authentication state even if the network request
+      fails.
+  [ ] Tokens never appear in URLs, application logs, or analytics events.
+

@@ -49,6 +49,40 @@ model User {
   role       Role    @relation(fields: [roleId], references: [id])
   college    College @relation(fields: [collegeId], references: [id])
   accountSetupTokens AccountSetupToken[]
+  authSessions AuthSession[]
+}
+
+model AuthSession {
+  id String @id @default(uuid())
+  userId Int
+  createdAt DateTime @default(now()) @db.Timestamptz(3) //session created time - login
+  lastUsedAt DateTime @default(now()) @db.Timestamptz(3) // last active
+  expiresAt DateTime @db.Timestamptz(3) //session expiry time - set it as 7 days from login
+  revokedAt DateTime? @db.Timestamptz(3) //session revoked - logged out 
+
+  userAgent String? //browser or mobile or etc...
+  ipAddress String? //Device ip 
+
+  user User @relation(fields: [userId], references: [id])
+  refreshTokens RefreshToken[]
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model RefreshToken {
+  id String @id @default(uuid())
+  authSessionId String //because authSession table's primary key is String
+  refreshTokenHash String @unique
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  expiresAt DateTime @db.Timestamptz(3)
+  usedAt DateTime? @db.Timestamptz(3)  // refresh token is used to create another new fresh tokens so this refresh token used at usedAt to create another refresh token
+  revokedAt DateTime? @db.Timestamptz(3) // user explicitly logged out time
+
+  authSession AuthSession @relation(fields: [authSessionId], references: [id])
+
+  @@index([authSessionId])
+  @@index([expiresAt])
 }
 
 model College {
@@ -215,10 +249,16 @@ model AttendanceRecord {
   @@unique([studentId, attendanceDate])
 }
 
+enum AccountTokenPurposeEnum {
+  ACCOUNT_ACTIVATION
+  PASSWORD_RESET
+}
+
 model AccountSetupToken {
   id Int @id @default(autoincrement())
   userId Int 
   tokenHash String @unique
+  purpose AccountTokenPurposeEnum @default(ACCOUNT_ACTIVATION)
   expiresAt DateTime @db.Timestamptz(3)
   usedAt DateTime? @db.Timestamptz(3)
 

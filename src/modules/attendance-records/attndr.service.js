@@ -143,35 +143,36 @@ const getAttendanceRecords = async (accessContext, attendanceQuery) => {
     }
   };
 
-  if(Number(by_face_matching_percentage) >= 0 && Number(by_face_matching_percentage) <= 100) {
+  if (Number(by_face_matching_percentage) >= 0 && Number(by_face_matching_percentage) <= 100) {
     attendanceWhere.faceMatchingPercentage = {
-      [face_matching_operator] : by_face_matching_percentage
+      [face_matching_operator]: by_face_matching_percentage
     }
   }
 
-  if(is_outside_hostel) {
-    attendanceWhere.isLocatedWithinHostelRadius = !is_outside_hostel;
+  if (is_outside_hostel !== undefined) {
+    attendanceWhere.isLocatedWithinHostelRadius =
+      !is_outside_hostel;
   }
 
   //attaching hostel scope to attendanceWhere
   const hostelId = accessContext.loggedInAdminHostelId;
   let studentWhere = { hostelId };
-  if(by_student_name?.trim()) {
+  if (by_student_name?.trim()) {
     studentWhere.studentName = {
       contains: by_student_name.trim(),
       mode: "insensitive"
     }
   }
-  if(by_roll_number?.trim()) {
+  if (by_roll_number?.trim()) {
     studentWhere.rollNumber = {
       equals: by_roll_number.trim()
     }
   }
-  if(Number(by_student_department_id) > 0) {
+  if (Number(by_student_department_id) > 0) {
     studentWhere.departmentId = by_student_department_id
-    
+
   }
-  if(Number(by_student_room_id) > 0) {
+  if (Number(by_student_room_id) > 0) {
     studentWhere.roomId = by_student_room_id
   }
 
@@ -187,13 +188,37 @@ const getAttendanceRecords = async (accessContext, attendanceQuery) => {
   let records;
   let totalCount;
   let percentage;
+  const totalStudentsOfAdminsHostel = await AttendanceRecordRepository.totalCountOfStudentsInOneHostel(accessContext.loggedInAdminHostelId);
+
+  const calculatePercentage = (count, total) => {
+    if (total === 0) return 0;
+    return Math.round((count / total) * 100);
+  };
+
+  const totalStudentsOfTheHostel =
+    await AttendanceRecordRepository.getTotalOfStudentsOfHostel(
+      studentWhere
+    );
+
+  const totalStudentsWithAtleastOnePresentDuringDateFilter =
+    await AttendanceRecordRepository
+      .getTotalOfStudentsWithAtleastOnePresentDuringRange(
+        attendanceWhere
+      );
+
+  const completelyAbsentStudentsCountDuringDates =
+    totalStudentsOfTheHostel -
+    totalStudentsWithAtleastOnePresentDuringDateFilter;
 
   if (status === "absent") {
     const datesList = getDatesListBetween(startDate, endDate);
     const { dbRecords, dbTotalCount } = await AttendanceRecordRepository.getAbsentStudentsRecord(hostelId, datesList, studentWhere, prismaPagination.skip, prismaPagination.take);
     records = dbRecords;
     totalCount = dbTotalCount;
-    percentage = Math.round((dbRecords.length / dbTotalCount) * 100);
+    percentage = calculatePercentage(
+      dbTotalCount,
+      totalStudentsOfTheHostel
+    );
   } else {
     [records, totalCount] = await Promise.all(
       [
@@ -201,13 +226,17 @@ const getAttendanceRecords = async (accessContext, attendanceQuery) => {
         AttendanceRecordRepository.getTotalCountOfAttendanceRecordPresent(attendanceWhere)
       ]
     );
-    percentage = Math.round((records.length / totalCount) * 100);
+
+    percentage = calculatePercentage(
+      totalStudentsWithAtleastOnePresentDuringDateFilter,
+      totalStudentsOfTheHostel
+    );
   }
 
   // get Summary 
-  const totalStudentsOfTheHostel = await AttendanceRecordRepository.getTotalOfStudentsOfHostel(studentWhere);
-  const totalStudentsWithatleastOnePresentDuringDateFilter = await AttendanceRecordRepository.getTotalOfStudentsWithAtleastOnePresentDuringRange(attendanceWhere);
-  const completelyAbsentStudentsCountDuringDates = totalStudentsOfTheHostel - totalStudentsWithatleastOnePresentDuringDateFilter;
+  // const totalStudentsOfTheHostel = await AttendanceRecordRepository.getTotalOfStudentsOfHostel(studentWhere);
+  // const totalStudentsWithatleastOnePresentDuringDateFilter = await AttendanceRecordRepository.getTotalOfStudentsWithAtleastOnePresentDuringRange(attendanceWhere);
+  // const completelyAbsentStudentsCountDuringDates = totalStudentsOfTheHostel - totalStudentsWithatleastOnePresentDuringDateFilter;
 
   //get pagination meta
   const paginationMeta = buildMeta(page, pageSize, totalCount);
@@ -216,7 +245,7 @@ const getAttendanceRecords = async (accessContext, attendanceQuery) => {
     records: {
       summary: {
         totalStudentsOfTheHostel,
-        totalStudentsWithatleastOnePresentDuringDateFilter,
+        totalStudentsWithAtleastOnePresentDuringDateFilter,
         completelyAbsentStudentsCountDuringDates
       },
       attendanceRecords: records,

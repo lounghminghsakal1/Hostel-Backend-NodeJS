@@ -140,6 +140,14 @@ const findStudentProfileById = async (studentProfileId) => {
   });
 };
 
+const totalCountOfStudentsInOneHostel = async (hostelId) => {
+  return prisma.studentProfile.count({
+    where: {
+      hostelId
+    }
+  });
+};
+
 
 const AttendanceRecordRepository = {
   findHostelById,
@@ -149,7 +157,8 @@ const AttendanceRecordRepository = {
   getTotalOfStudentsOfHostel,
   getTotalOfStudentsWithAtleastOnePresentDuringRange,
   getAbsentStudentsRecord,
-  findStudentProfileById
+  findStudentProfileById,
+  totalCountOfStudentsInOneHostel
 };
 
 export default AttendanceRecordRepository;

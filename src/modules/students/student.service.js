@@ -70,7 +70,7 @@ const createStudent = async (studentRequestBody, accessContext) => {
     const { rawToken, hashedToken } = generateActivationToken();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-    await StudentRepository.createAccountSetupTokenRecord(tx, createdUser.id, hashedToken, expiresAt);
+    await StudentRepository.createAccountSetupTokenRecord(tx, createdUser.id, hashedToken, expiresAt, "ACCOUNT_ACTIVATION");
 
     return {
       createdUser,
@@ -118,8 +118,10 @@ const getAllStudentProfiles = async (accessContext, getStudentsQuery) => {
   return { students, paginationMeta };
 };
 
-const getOneStudentProfileById = async (id, accessContext) => {
-  const oneStudent = await StudentRepository.getOneStudentProfileById(id, accessContext.loggedInAdminHostelId, accessContext.loggedInAdminCollegeId);
+const getOneStudentProfileById = async (id, user, accessContext) => {
+  const hostelId = accessContext.loggedInAdminHostelId ?? accessContext.loggedInStudentHostelId;
+  if (user.role.roleName !== "HOSTEL_ADMIN" && id !== user.studentProfile.id) throw createHttpError(403, "You cannot access another student's profile", { errors: "Invalid student profile id" });
+  const oneStudent = await StudentRepository.getOneStudentProfileById(id, hostelId);
   if (oneStudent === null) throw createHttpError(404, `Student with id ${id} is not found`, { errors: "Student id not found in the database" });
   let studentImageUrl = null;
   if (oneStudent.studentImageKey) {
@@ -272,14 +274,13 @@ const setupNewPassword = async (accessContext, setupNewPasswordRequestBody) => {
   const {
     token,
     newPassword,
-    forgotPassword
   } = setupNewPasswordRequestBody;
 
   //token validations
   //checking token exist or not
   const tokenFromDB = await StudentRepository.findToken(getHashedVersionOfToken(token));
 
-  if (!tokenFromDB) throw createHttpError(404, "Tokennnn not found", { errors: "Token not found in DB" });
+  if (!tokenFromDB) throw createHttpError(404, "Token not found", { errors: "Token not found in DB" });
 
   if (new Date() > tokenFromDB.expiresAt) throw createHttpError(422, "Link expired, contact your hostel admin to get activation link again", { errors: "Token expired" });
 
@@ -289,14 +290,34 @@ const setupNewPassword = async (accessContext, setupNewPasswordRequestBody) => {
   const user = await StudentRepository.findUserById(tokenFromDB.userId);
   if (!user) throw createHttpError(404, "User not found", { errors: "User not found" });
 
-  if (!forgotPassword && user.status !== "PENDING_ACTIVATION") throw createHttpError(422, "User is already " + user.status + " so contact hostel admin", { errors: "Invalid user status for setup new password" });
+  if (tokenFromDB.purpose === "ACCOUNT_ACTIVATION") {
+    if (user.status !== "PENDING_ACTIVATION") {
+      throw createHttpError(
+        422,
+        "Account activation token is not valid for this account",
+        { errors: "Invalid account status for activation" }
+      );
+    }
+  }
+
+  if (tokenFromDB.purpose === "PASSWORD_RESET") {
+    if (user.status !== "ACTIVE") {
+      throw createHttpError(
+        403,
+        "Account is not active, contact admin",
+        { errors: "Account is not active" }
+      );
+    }
+  }
 
   const hashedPassword = await getHasedVersionOfPassword(newPassword);
-  //change password of user
-  const passwordUpdatedUser = await StudentRepository.setupNewPasswordToUser(tokenFromDB.userId, hashedPassword);
 
-  //update usedAt column of accountsetuptoken
-  const updatedAccountSetupTokenRecord = await StudentRepository.updatedAccountSetupTokenRecord(tokenFromDB.id);
+  await StudentRepository.consumeAccountTokenAndSetPassword(tokenFromDB, hashedPassword);
+  //change password of user
+  // const passwordUpdatedUser = await StudentRepository.setupNewPasswordToUser(tokenFromDB.userId, hashedPassword);
+
+  // //update usedAt column of accountsetuptoken
+  // const updatedAccountSetupTokenRecord = await StudentRepository.updateAccountSetupTokenRecord(tokenFromDB.id);
 
   return "Password updated successfully, now login with new password";
 };
@@ -318,7 +339,7 @@ const sendActivationLinkMail = async (accessContext, studentProfileId) => {
   const { rawToken, hashedToken } = generateActivationToken();
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-  await StudentRepository.createAccountSetupTokenRecord(null, student.user.id, hashedToken, expiresAt);
+  await StudentRepository.createAccountSetupTokenRecord(null, student.user.id, hashedToken, expiresAt, "ACCOUNT_ACTIVATION");
 
   const activationLink = `ourhostel://setup-password?token=${rawToken}`;
   //send email to student containing activation link
@@ -349,11 +370,14 @@ const forgotPasswordRequest = async (forgotPasswordRequestBody) => {
 
   }
 
+  if (studentInThisEmail.status !== "ACTIVE") throw createHttpError(403, "Your account is not active, contact admin", { errors: "Account not active" });
+
+
   const { rawToken, hashedToken } = generateActivationToken();
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
-  const activationLink = `ourhostel://setup-password?forgotPassword=true&token=${rawToken}`;
+  const activationLink = `ourhostel://setup-password?token=${rawToken}`;
 
-  const accountSetupToken = StudentRepository.createAccountSetupTokenRecord(null, studentInThisEmail.id, hashedToken, expiresAt);
+  const accountSetupToken = await StudentRepository.createAccountSetupTokenRecord(null, studentInThisEmail.id, hashedToken, expiresAt, "PASSWORD_RESET");
 
   const emailResponse = await sendEmail(email, "Account activation for ourhostel.in", "Please click the link to activate your account, the link will be expired in 5 mins",
     `<div>
