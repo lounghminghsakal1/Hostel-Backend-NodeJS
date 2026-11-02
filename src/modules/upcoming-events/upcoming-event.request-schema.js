@@ -21,6 +21,6 @@ export const getUpcomingEventsQuerySchema = paginationQuerySchema.extend({
   by_event_name: z.string().optional(),
   from_date: z.iso.date().optional(),
   to_date: z.iso.date().optional(),
-  is_active: z.enum(["true", "false"]).transform(value => value === "true").optional().default("false"),
+  is_active: z.enum(["true", "false"]).transform(value => value === "true").optional(),
 }); 
 

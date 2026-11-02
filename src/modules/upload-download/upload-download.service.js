@@ -43,7 +43,7 @@ const getPresignedUrlForUploadingAttendanceImage = async () => {
 };
 
 const getPresignedUrlForDownloadingStudentImage = async (accessContext) => {
-  const objectKey = `student-images/${accessContext.loggedInStudentProfileId}.jpg`;
+  const objectKey = `students/${accessContext.loggedInStudentProfileId}.jpg`;
   const command = new GetObjectCommand({
     Bucket: envValues.AWS_S3_BUCKET_NAME,
     Key: objectKey,

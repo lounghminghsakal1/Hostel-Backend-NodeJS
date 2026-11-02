@@ -1,5 +1,6 @@
 import { prisma } from "../../configs/db.js";
 import { currentDate } from "../../utils/dates.utils.js";
+import createHttpError from "http-errors";
 
 const findUserByEmail = async (tx, email) => {
   const user = tx ? await tx.user.findUnique({
@@ -9,7 +10,7 @@ const findUserByEmail = async (tx, email) => {
   }) : await prisma.user.findUnique({
     where: {
       email
-    }
+    },
   });
   return user;
 };
@@ -98,7 +99,7 @@ const createStudentProfile = async (tx, studentName, contactNumber, parentMobile
 const getAllStudentProfiles = async (studentsWhere, skip, take) => {
   const students = await prisma.studentProfile.findMany({
     where: studentsWhere,
-    orderBy: {id: "asc"},
+    orderBy: { id: "asc" },
     skip,
     take
   });
@@ -107,15 +108,14 @@ const getAllStudentProfiles = async (studentsWhere, skip, take) => {
     where: studentsWhere
   });
 
-  return {students, studentsCount};
+  return { students, studentsCount };
 };
 
-const getOneStudentProfileById = async (id, hostelId, collegeId) => {
+const getOneStudentProfileById = async (id, hostelId) => {
   return await prisma.studentProfile.findFirst({
     where: {
       id: id,
       hostelId: hostelId,
-      collegeId: collegeId
     },
     include: {
       user: {
@@ -135,7 +135,7 @@ const getOneStudentProfileById = async (id, hostelId, collegeId) => {
           id: true,
           departmentName: true
         }
-      }, 
+      },
     }
   });
 };
@@ -245,18 +245,20 @@ const getTodayMarkedAttendanceOfStudent = async (studentProfileId) => {
   });
 };
 
-const createAccountSetupTokenRecord = async (tx, userId, tokenHash, expiresAt) => {
+const createAccountSetupTokenRecord = async (tx, userId, tokenHash, expiresAt, purpose) => {
   return tx ? await tx.accountSetupToken.create({
     data: {
       userId: userId,
       tokenHash: tokenHash,
-      expiresAt: expiresAt
+      expiresAt: expiresAt,
+      purpose: purpose
     }
   }) : await prisma.accountSetupToken.create({
     data: {
       userId,
       tokenHash,
-      expiresAt
+      expiresAt,
+      purpose
     }
   });
 };
@@ -269,8 +271,16 @@ const findToken = async (hashedToken) => {
   });
 };
 
-const setupNewPasswordToUser = async (userId, hashedPassword) => {
-  return await prisma.user.update({
+const setupNewPasswordToUser = async (userId, hashedPassword, tx) => {
+  return tx ? await tx.user.update({
+    where: {
+      id: userId
+    },
+    data: {
+      passwordHash: hashedPassword,
+      status: "ACTIVE"
+    }
+  }) : await prisma.user.update({
     where: {
       id: userId
     },
@@ -281,8 +291,20 @@ const setupNewPasswordToUser = async (userId, hashedPassword) => {
   });
 };
 
-const updatedAccountSetupTokenRecord = async (id) => {
-  return await prisma.accountSetupToken.update({
+const updateAccountSetupTokenRecord = async (id, tx) => {
+  return tx ? await tx.accountSetupToken.update({
+    where: {
+      id: id,
+      purpose: "PASSWORD_RESET",
+      usedAt: null,
+      expiresAt: {
+        gt: new Date()
+      },
+    },
+    data: {
+      usedAt: new Date()
+    }
+  }) : await prisma.accountSetupToken.update({
     where: {
       id: id
     },
@@ -338,6 +360,196 @@ const getUpcomingEventsData = async (hostelId) => {
   });
 };
 
+const setupNewPasswordAndUpdateAccountSetupTokenRecord = async (tokenFromDB, hashedPassword) => {
+  await prisma.$transaction(async (tx) => {
+    const consumed = await tx.accountSetupToken.updateMany({
+      where: {
+        id: tokenFromDB.id,
+        usedAt: null,
+        expiresAt: {
+          gt: new Date()
+        }
+      },
+      data: {
+        usedAt: new Date()
+      }
+    });
+
+    if (consumed.count !== 1) {
+      throw createHttpError(422, "Token expired or already used");
+    }
+
+    await tx.user.update({
+      where: {
+        id: tokenFromDB.userId
+      },
+      data: {
+        passwordHash: hashedPassword,
+        ...(tokenFromDB.purpose === "ACCOUNT_ACTIVATION" ? { status: "ACTIVE"} : {})
+        // Do not set status: "ACTIVE"
+      }
+    });
+
+    const sessions = await tx.authSession.findMany({
+      where: {
+        userId: tokenFromDB.userId
+      },
+      select: {
+        id: true
+      }
+    });
+
+    const sessionIds = sessions.map(session => session.id);
+
+    await tx.refreshToken.updateMany({
+      where: {
+        authSessionId: {
+          in: sessionIds
+        },
+        revokedAt: null
+      },
+      data: {
+        revokedAt: new Date()
+      }
+    });
+
+    await tx.authSession.updateMany({
+      where: {
+        id: {
+          in: sessionIds
+        },
+        revokedAt: null
+      },
+      data: {
+        revokedAt: new Date()
+      }
+    });
+  });
+};
+
+const consumeAccountTokenAndSetPassword = async (
+  tokenFromDB,
+  hashedPassword
+) => {
+  return prisma.$transaction(async (tx) => {
+    const consumedToken = await tx.accountSetupToken.updateMany({
+      where: {
+        id: tokenFromDB.id,
+        tokenHash: tokenFromDB.tokenHash,
+        purpose: tokenFromDB.purpose,
+        usedAt: null,
+        expiresAt: {
+          gt: new Date()
+        }
+      },
+      data: {
+        usedAt: new Date()
+      }
+    });
+
+    if (consumedToken.count !== 1) {
+      throw createHttpError(
+        422,
+        "Token expired or already used",
+        { errors: "Invalid token" }
+      );
+    }
+
+    if (tokenFromDB.purpose === "ACCOUNT_ACTIVATION") {
+      const activatedUser = await tx.user.updateMany({
+        where: {
+          id: tokenFromDB.userId,
+          status: "PENDING_ACTIVATION"
+        },
+        data: {
+          passwordHash: hashedPassword,
+          status: "ACTIVE",
+          mustChangePassword: false
+        }
+      });
+
+      if (activatedUser.count !== 1) {
+        throw createHttpError(
+          422,
+          "Account cannot be activated",
+          { errors: "Invalid account status" }
+        );
+      }
+
+      return;
+    }
+
+    if (tokenFromDB.purpose === "PASSWORD_RESET") {
+      const updatedUser = await tx.user.updateMany({
+        where: {
+          id: tokenFromDB.userId,
+          status: "ACTIVE"
+        },
+        data: {
+          passwordHash: hashedPassword,
+          mustChangePassword: false
+        }
+      });
+
+      if (updatedUser.count !== 1) {
+        throw createHttpError(
+          403,
+          "Account is not active",
+          { errors: "Account is not active" }
+        );
+      }
+
+      const sessions = await tx.authSession.findMany({
+        where: {
+          userId: tokenFromDB.userId,
+          revokedAt: null
+        },
+        select: {
+          id: true
+        }
+      });
+
+      const sessionIds = sessions.map(session => session.id);
+
+      if (sessionIds.length > 0) {
+        const revokedAt = new Date();
+
+        await tx.refreshToken.updateMany({
+          where: {
+            authSessionId: {
+              in: sessionIds
+            },
+            revokedAt: null
+          },
+          data: {
+            revokedAt
+          }
+        });
+
+        await tx.authSession.updateMany({
+          where: {
+            id: {
+              in: sessionIds
+            },
+            revokedAt: null
+          },
+          data: {
+            revokedAt
+          }
+        });
+      }
+
+      return;
+    }
+
+    throw createHttpError(
+      422,
+      "Unsupported token purpose",
+      { errors: "Invalid token purpose" }
+    );
+  });
+};
+
 const StudentRepository = {
   findUserByEmail,
   findStudentProfileByContactNumber,
@@ -360,10 +572,12 @@ const StudentRepository = {
   createAccountSetupTokenRecord,
   findToken,
   setupNewPasswordToUser,
-  updatedAccountSetupTokenRecord,
+  updateAccountSetupTokenRecord,
   getAllDepartments,
   getAnnouncementsData,
   getUpcomingEventsData,
+  setupNewPasswordAndUpdateAccountSetupTokenRecord,
+  consumeAccountTokenAndSetPassword
 };
 
 export default StudentRepository;

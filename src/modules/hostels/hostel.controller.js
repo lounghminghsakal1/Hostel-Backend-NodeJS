@@ -9,7 +9,8 @@ const updateHostel = async (req, res) => {
 };
 
 const getAllHostelsOfLoggedAdminCollege = async (req, res) => {
-  const allHostels = await HostelService.getAllHostelsOfLoggedAdminCollege(Number(req.user.collegeId));
+  const accessContext = getAccessContext(req);
+  const allHostels = await HostelService.getAllHostelsOfLoggedAdminCollege(Number(accessContext.loggedInAdminCollegeId));
   return Responses.successResponse(res, "All hostels of your college fetched successfully", allHostels);
 };
 

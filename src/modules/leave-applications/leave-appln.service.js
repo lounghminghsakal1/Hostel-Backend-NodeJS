@@ -11,6 +11,8 @@ const createLeaveApplication = async (accessContext, createLeaveApplicationReque
 
   const { leaveReason, fromDate, toDate } = createLeaveApplicationRequestBody;
 
+  if (fromDate > toDate) throw createHttpError(422, "From date must be before to to date", { errors: "Invalid date ranges" })
+
   //the passes from date and to date should not overlap with existing approved leave application
   const leaveApplicationWithOverlappingTimePeriod = await LeaveApplicationRepository.findLeaveApplicationOfStudentWithOverLappingTimePeriodAndApproved(accessContext.loggedInStudentProfileId, fromDate, toDate);
   if (leaveApplicationWithOverlappingTimePeriod) throw createHttpError(409, "Already an approved leave application exists in that requested time period", { errors: "Invalid time period" });
@@ -19,19 +21,24 @@ const createLeaveApplication = async (accessContext, createLeaveApplicationReque
   return createdLeaveApplication;
 };
 
-const updateLeaveApplication = async (accessContext, leaveApplicationId, updateLeaveApplicationRequestBody) => {
+const updateLeaveApplication = async (accessContext, leaveApplicationId, updateLeaveApplicationRequestBody, user) => {
   //check whether leave application with id exists or not
   const leaveApplication = await LeaveApplicationRepository.findLeaveApplicationById(leaveApplicationId, accessContext.loggedInStudentHostelId);
   if (!leaveApplication) throw createHttpError(404, `Leave application with ${leaveApplicationId} not found`, { errors: "Invalid id" });
 
+  if (leaveApplication.studentId !== user.studentProfile.id) throw createHttpError(403, "You cannot update another student's leave application", { errors: "Invalid id" });
   if (leaveApplication.status !== "WAITING_FOR_APPROVAL") throw createHttpError(409, "Leave application is not in pending status, only pending status leave applications can be updated/edited", { errors: "Invalid request" });
 
   const { leaveReason, fromDate, toDate } = updateLeaveApplicationRequestBody;
 
   if ((fromDate && !toDate) || (!fromDate && toDate)) throw createHttpError(409, "Please provide both from date and to date or provide neither", { errors: "Both from date and to date must be present or nothing(atomic)" })
 
-  const leaveApplicationWithOverlappingTimePeriod = await LeaveApplicationRepository.findLeaveApplicationOfStudentWithOverLappingTimePeriodAndApproved(accessContext.loggedInStudentProfileId, fromDate, toDate);
-  if (leaveApplicationWithOverlappingTimePeriod) throw createHttpError(409, "The requested time period(fromDate and toDate) overlapping with exisitng approved leave application", { errors: "Invalid date periods" });
+  if (fromDate > toDate) throw createHttpError(422, "From date must be before to to date", { errors: "Invalid date ranges" })
+
+  if (fromDate && toDate) {
+    const leaveApplicationWithOverlappingTimePeriod = await LeaveApplicationRepository.findLeaveApplicationOfStudentWithOverLappingTimePeriodAndApproved(accessContext.loggedInStudentProfileId, fromDate, toDate);
+    if (leaveApplicationWithOverlappingTimePeriod) throw createHttpError(409, "The requested time period(fromDate and toDate) overlapping with exisitng approved leave application", { errors: "Invalid date periods" });
+  }
 
   const updatedLeaveApplication = await LeaveApplicationRepository.updateLeaveApplication(leaveApplicationId, leaveReason, fromDate, toDate);
   return updatedLeaveApplication;
@@ -49,55 +56,55 @@ const getAllLeaveApplications = async (accessContext, getAllLeaveApplicationRequ
     pageSize
   } = getAllLeaveApplicationRequestQuery;
 
-  let leaveApplicationWhere = { student: { hostelId: accessContext.loggedInAdminHostelId}};
-  if(by_student_name?.trim()) {
+  let leaveApplicationWhere = { student: { hostelId: accessContext.loggedInAdminHostelId } };
+  if (by_student_name?.trim()) {
     leaveApplicationWhere.student.studentName = {
       contains: by_student_name.trim(),
       mode: "insensitive"
     }
   }
-  if(by_student_roll_number?.trim()) {
+  if (by_student_roll_number?.trim()) {
     leaveApplicationWhere.student.rollNumber = {
       equals: by_student_roll_number.trim()
     }
   }
-  if(by_student_department_id > 0) {
+  if (by_student_department_id > 0) {
     leaveApplicationWhere.student.departmentId = by_student_department_id
   }
-  if(by_student_room_id > 0) {
+  if (by_student_room_id > 0) {
     leaveApplicationWhere.student.roomId = by_student_room_id
   }
-  if(by_status?.trim()) {
+  if (by_status?.trim()) {
     const availableStatuses = ["WAITING_FOR_APPROVAL", "APPROVED", "REJECTED", "CANCELLED"];
-    if(availableStatuses.includes(by_status.trim())) {
+    if (availableStatuses.includes(by_status.trim())) {
       leaveApplicationWhere.status = by_status.trim();
     }
   }
   const prismaPagination = toPrismaPagination(page, pageSize);
-  const {status, ...statusesWhere} = leaveApplicationWhere;
+  const { status, ...statusesWhere } = leaveApplicationWhere;
   const [allLeaveApplications, statusesCount, totalCount] = await Promise.all(
-    [ 
-      LeaveApplicationRepository.getAllLeaveApplications(leaveApplicationWhere, prismaPagination.skip, prismaPagination.take), 
+    [
+      LeaveApplicationRepository.getAllLeaveApplications(leaveApplicationWhere, prismaPagination.skip, prismaPagination.take),
       LeaveApplicationRepository.getCountOfStatuses(statusesWhere),
       LeaveApplicationRepository.getTotalLeaveApplicationCount(leaveApplicationWhere)]);
   const paginationMeta = buildMeta(page, pageSize, totalCount);
-  return {allLeaveApplications, statusesCount, paginationMeta};
+  return { allLeaveApplications, statusesCount, paginationMeta };
 };
 
 const getOneLeaveApplication = async (accessContext, id) => {
   const leaveApplication = await LeaveApplicationRepository.getOneLeaveApplication(id, accessContext.loggedInAdminHostelId);
   if (!leaveApplication) throw createHttpError(404, `Leave application with id ${id} is not found`, { errors: "Invalid leave application id" });
-  
+
   //fetch that particular student's previous leave in last 2 months, if any 
   const previoudTwoMonthLeavesOfThatStudent = await LeaveApplicationRepository.previoudTwoMonthLeavesOfThatStudent(leaveApplication.studentId);
-  
-  return {leaveApplication, previoudTwoMonthLeaveApplications: previoudTwoMonthLeavesOfThatStudent};
+
+  return { leaveApplication, previoudTwoMonthLeaveApplications: previoudTwoMonthLeavesOfThatStudent };
 };
 
 const reviewLeaveApplication = async (accessContext, leaveApplicationId, reviewLeaveApplicationRequestBody) => {
   //First check leave application with passes id exist or not
   const leaveApplication = await LeaveApplicationRepository.findLeaveApplicationById(leaveApplicationId, accessContext.loggedInAdminHostelId);
-  if (!leaveApplication) throw createHttpError(404, `Leave application with id ${id} is not found`, { errors: "Invalid leave application id" });
+  if (!leaveApplication) throw createHttpError(404, `Leave application with id ${leaveApplicationId} is not found`, { errors: "Invalid leave application id" });
 
   if (leaveApplication.status !== "WAITING_FOR_APPROVAL") throw createHttpError(409, "Leave application is not in pending or waiting_for_approval state, so can't review it, currently its " + leaveApplication.status, { errors: "Invalid leave applicaiton review" });
 
@@ -105,15 +112,17 @@ const reviewLeaveApplication = async (accessContext, leaveApplicationId, reviewL
 
   if (status === "REJECTED" && !rejectionReason) throw createHttpError(422, "Rejection reason is required when rejecting a leave application", { errors: "Missing fields" });
 
+  if(status === "APPROVED" && rejectionReason) throw createHttpError(422, "Rejection reason should not be present for approved leave application", {errors: "Invalid request"});
   const reviewedLeaveApplication = await LeaveApplicationRepository.reviewLeaveApplication(leaveApplicationId, status, rejectionReason);
   return reviewedLeaveApplication;
 };
 
-const cancelLeaveApplication = async (accessContext, leaveApplicationId) => {
+const cancelLeaveApplication = async (accessContext, leaveApplicationId, user) => {
   //first check its present or not
   const leaveApplication = await LeaveApplicationRepository.findLeaveApplicationById(leaveApplicationId, accessContext.loggedInStudentHostelId);
   if (!leaveApplication) throw createHttpError(404, `Leave application with id ${leaveApplicationId} is not found`, { errors: "Invalid id" });
 
+  if (leaveApplication.studentId !== user.studentProfile.id) throw createHttpError(403, "You cannot cancel another student's leave application", { errors: "Invalid id" });
   if (leaveApplication.status !== "WAITING_FOR_APPROVAL") throw createHttpError(409, `Leave application with pending/waiting status only can be cancelled, currently its ${leaveApplication.status}`, { errors: "Cannot cancel because its already " + leaveApplication.status });
 
   const cancelledLeaveApplication = await LeaveApplicationRepository.cancelLeaveApplication(leaveApplicationId, accessContext.loggedInStudentProfileId);

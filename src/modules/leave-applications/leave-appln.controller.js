@@ -10,7 +10,7 @@ const createLeaveApplication = async (req, res) => {
 
 const updateLeaveApplication = async (req, res) => {
   const accessContext = getAccessContext(req);
-  const updatedLeaveApplication = await LeaveApplicationService.updateLeaveApplication(accessContext, Number(req.params.id), req.body);
+  const updatedLeaveApplication = await LeaveApplicationService.updateLeaveApplication(accessContext, Number(req.params.id), req.body, req.user);
   return Responses.successResponse(res, "Leave application updated successfully", updatedLeaveApplication);
 };
 
@@ -35,7 +35,7 @@ const reviewLeaveApplication = async (req, res) => {
 
 const cancelLeaveApplication = async (req, res) => {
   const accessContext = getAccessContext(req);
-  const cancelledLeaveApplication = await LeaveApplicationService.cancelLeaveApplication(accessContext, Number(req.params.id));
+  const cancelledLeaveApplication = await LeaveApplicationService.cancelLeaveApplication(accessContext, Number(req.params.id), req.user);
   return Responses.successResponse(res, "Leave application cancelled successfully", cancelledLeaveApplication);
 };
 

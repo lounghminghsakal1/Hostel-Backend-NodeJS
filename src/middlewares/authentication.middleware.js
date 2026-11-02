@@ -43,7 +43,12 @@ const authenticateUserMiddleware = async (req, res, next) => {
     });
 
     if (!user) throw createHttpError(404, "User not found", { errors: "user not found" });
+    if(user.status !== "ACTIVE") throw createHttpError(401, "Account is not active, contact admin", {errors: "Account is not active"});
     req.user = user;
+    req.auth = {
+      userId: user.id,
+      sessionId: decodedData.sId 
+    };
     next();
 
   } catch (err) {
