@@ -10,6 +10,7 @@ const getHostelAdminProfile = async (id) => {
       hostelAdminName: true,
       hostel: {
         select: {
+          id: true,
           hostelName: true
         }
       },

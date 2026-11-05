@@ -45,6 +45,15 @@ const findLeaveApplicationById = async (id, hostelId) => {
       student: {
         hostelId: hostelId
       }
+    },
+    include: {
+      student: {
+        select: {
+          id: true,
+          studentImageKey: true,
+          studentName: true
+        }
+      }
     }
   });
 };
@@ -68,6 +77,8 @@ const getAllLeaveApplications = async (leaveApplicationWhere, skip, take) => {
     include: {
       student: {
         select: {
+          id: true,
+          studentImageKey: true,
           studentName: true,
           contactNumber: true,
           parentMobileNumber: true,

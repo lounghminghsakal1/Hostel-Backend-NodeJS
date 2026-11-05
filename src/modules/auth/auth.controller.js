@@ -1,3 +1,4 @@
+import { getAccessContext } from "../../utils/helper-functions.utils.js";
 import Responses from "../../utils/responses.utils.js";
 import AuthService from "./auth.service.js";
 
@@ -18,10 +19,18 @@ const logout = async (req, res) => {
   return Responses.successResponse(res, "Logged out successfully", logoutResponse);
 };
 
+const changePassword = async (req, res) => {
+  const accessContext = getAccessContext(req);
+  const changedPasswordResponse = await AuthService.changePassword(accessContext, req.body);
+  return Responses.successResponse(res, "Password changed successfully", changedPasswordResponse);
+};
+
+
 const AuthController = {
   authLogin,
   refreshTokens,
-  logout
+  logout,
+  changePassword
 };
 
 export default AuthController;

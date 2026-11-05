@@ -109,6 +109,7 @@ const getAbsentStudentsRecord = async (hostelId, expectedDates, studentWhere ,sk
 
     if (thisStudentabsentDates.length > 0) {
       absentStudents.push({
+        id: student.id,
         studentName: student.studentName,
         rollNumber: student.rollNumber,
         contactNumber: student.contactNumber,

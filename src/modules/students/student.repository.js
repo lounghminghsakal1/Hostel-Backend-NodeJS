@@ -100,6 +100,26 @@ const getAllStudentProfiles = async (studentsWhere, skip, take) => {
   const students = await prisma.studentProfile.findMany({
     where: studentsWhere,
     orderBy: { id: "asc" },
+    include: {
+      user: {
+        select: {
+          email: true,
+          status: true
+        }
+      },
+      department: {
+        select: {
+          departmentName: true,
+          id: true
+        }
+      },
+      room: {
+        select: {
+          roomNumber: true,
+          id: true
+        }
+      }
+    },
     skip,
     take
   });
@@ -121,7 +141,8 @@ const getOneStudentProfileById = async (id, hostelId) => {
       user: {
         select: {
           id: true,
-          email: true
+          email: true,
+          status: true
         }
       },
       room: {

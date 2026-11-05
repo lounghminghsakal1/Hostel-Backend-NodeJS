@@ -6,6 +6,7 @@ import envValues from "../../configs/envFile.js";
 import { getHashedVersionOfToken } from "../../utils/activation-token.utils.js";
 import { prisma } from "../../configs/db.js";
 import crypto from "crypto";
+import { getHasedVersionOfPassword } from "../../utils/password.utils.js";
 
 const loginUser = async (loginRequestBody) => {
   const user = await AuthRepository.findUserByEmail(loginRequestBody.email);
@@ -182,10 +183,27 @@ const logout = async (user, sessionId, logoutRequestBody) => {
   return "Logged out successfully";
 };
 
+const changePassword = async (accessContext, changePasswordRequestBody) => {
+  const {
+    currentPassword, 
+    newPassword
+  } = changePasswordRequestBody;
+
+  //check currentPassword is correct or not
+  const isPasswordCorrect = await AuthRepository.isPasswordCorrect(accessContext?.userId, getHasedVersionOfPassword(currentPassword));
+  if(!isPasswordCorrect) throw createHttpError(400, "Invalid current password", {errors: "Invalid current password"});
+
+  //set new password 
+  await AuthRepository.setNewPasswordToUser(accessContext.userId, getHasedVersionOfPassword(newPassword));
+
+  return "Password updated";
+};
+
 const AuthService = {
   loginUser,
   refreshTokens,
-  logout
+  logout,
+  changePassword
 };
 
 export default AuthService;

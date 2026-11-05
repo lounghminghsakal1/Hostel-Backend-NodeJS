@@ -51,6 +51,8 @@ const findRoomById = async (id, hostelId, collegeId) => {
       hostelId: true,
       studentProfiles: {
         select: {
+          id: true,
+          studentImageKey: true,
           studentName: true,
           contactNumber: true,
           rollNumber: true,

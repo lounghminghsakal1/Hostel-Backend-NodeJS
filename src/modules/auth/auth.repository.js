@@ -152,13 +152,37 @@ const revokeThisSessionAndThisRefreshTokenOnly = async (refreshTokenFromDb) => {
   });
 };
 
+const isPasswordCorrect = async (userId, currentPasswordHash) => {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+      passwordHash: currentPasswordHash
+    }
+  });
+  if(user) return true;
+  return false;
+};
+
+const setNewPasswordToUser = async (userId, newPasswordHash) => {
+  return await prisma.user.update({
+    where: {
+      id: userId
+    },
+    data: {
+      passwordHash: newPasswordHash
+    }
+  });
+};
+
 const AuthRepository = {
   findUserByEmail,
   createSession,
   getRefreshTokenByHashedRefreshToken,
   revokeSession,
   logoutFromAllSessionsAndRevokeRefreshToken,
-  revokeThisSessionAndThisRefreshTokenOnly
+  revokeThisSessionAndThisRefreshTokenOnly,
+  isPasswordCorrect,
+  setNewPasswordToUser
 };
 
 export default AuthRepository;

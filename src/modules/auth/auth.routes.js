@@ -13,6 +13,8 @@ authRouter.post("/refresh", validateRequestMiddleware({body: z.object({refreshTo
 
 authRouter.post("/logout", authenticateUserMiddleware, validateRequestMiddleware({body: z.object( {refreshToken: z.string()})}), AuthController.logout);
 
+authRouter.post("/change_password", authenticateUserMiddleware, validateRequestMiddleware({body: z.object({currentPassword: z.string(), newPassword: z.string()})}), AuthController.changePassword);
+
 export default authRouter;
 
 
