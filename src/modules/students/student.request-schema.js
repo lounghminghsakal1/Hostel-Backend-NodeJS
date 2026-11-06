@@ -14,6 +14,10 @@ export const createStudentProfileRequestBodySchema = z.object({
 
 export const updateStudentProfileRequestBodySchema = createStudentProfileRequestBodySchema.partial();
 
+export const checkStudentImageRequestBodySchema = z.object({
+  studentImageKey: z.string().min(1)
+});
+
 export const updateStudentStatusRequestBodySchema = z.object({
   status: z.enum(["INACTIVE", "SUSPENDED", "ACTIVE"])
 });

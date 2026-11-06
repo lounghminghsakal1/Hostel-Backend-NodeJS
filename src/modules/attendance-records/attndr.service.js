@@ -3,7 +3,7 @@ import AttendanceRecordRepository from "./attndr.repository.js";
 import { buildMeta, paginationQuerySchema, toPrismaPagination } from "../../utils/pagination.utils.js";
 import { currentDate, currentDateForDb, getAttendanceWindowState, getDateRange, getDatesListBetween } from "../../utils/dates.utils.js";
 import { getS3SignedUrlByKey } from "../../utils/helper-functions.utils.js";
-import envValues from "../../configs/envFile.js";
+import { faceServerUrl as getFaceServerUrl } from "../../services/face-server.service.js";
 //, getDatesListBetween
 
 const markAttendance = async (accessContext, markAttendanceRequestBody) => {
@@ -41,7 +41,11 @@ const markAttendance = async (accessContext, markAttendanceRequestBody) => {
     throw createHttpError(409, "Student image is not uploaded yet, ask your hostel manager for details", { errors: "Student's image not uploaded" });
   }
 
-  faceMatchingPercentage = await verifyFace(student.studentImageKey, capturedImageKey);
+  //recent check-ins that matched the registered photo strongly help with changes in look (beard, moustache, haircut)
+  const sinceDate = new Date(todayIst.getTime() - FACE_REFERENCE_LOOKBACK_DAYS * 24 * 60 * 60 * 1000);
+  const recentTrustedCaptures = await AttendanceRecordRepository.getRecentTrustedCapturesOfStudent(accessContext.loggedInStudentProfileId, sinceDate, FACE_REFERENCE_MIN_PERCENTAGE, FACE_REFERENCE_COUNT);
+
+  faceMatchingPercentage = await verifyFace(student.studentImageKey, capturedImageKey, recentTrustedCaptures.map(record => record.capturedImageKey));
 
   //creating attendance record in DB
   const createdAttendanceRecord = await AttendanceRecordRepository.markAttendance(todayIst, capturedImageKey, faceMatchingPercentage, latitude, longitude, isLocatedWithinHostelRadius, locationDeviationFromHostel, accessContext.loggedInStudentProfileId);
@@ -49,10 +53,18 @@ const markAttendance = async (accessContext, markAttendanceRequestBody) => {
   return createdAttendanceRecord;
 };
 
+//face match percentage bands (the python server's percentage is calibrated to these):
+//65+ trusted (green), 30-65 check the photos (yellow), below 30 likely someone else (red)
+const FACE_REFERENCE_MIN_PERCENTAGE = 80; //only clearly trusted check-ins are used as references
+const FACE_REFERENCE_LOOKBACK_DAYS = 30;
+const FACE_REFERENCE_COUNT = 3;
+
 //calls the python fast api face verification server and returns the matching percentage
 //if the server is down or slow, the student gets a clear 503 instead of an internal error
-const verifyFace = async (baseImageKey, capturedImageKey) => {
-  const faceServerUrl = (envValues.FACE_VERIFICATION_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
+//if the selfie has no clear face (or someone else is in it), the student gets a 422 and can retake it - nothing is saved
+//if the registered photo has no clear face, the student is told to ask the hostel office for a new photo
+const verifyFace = async (baseImageKey, capturedImageKey, referenceImageKeys = []) => {
+  const faceServerUrl = getFaceServerUrl();
   const unavailable = () => createHttpError(503, "Face verification is unavailable right now, please try again in a few minutes", { errors: "Face verification server unavailable" });
 
   try {
@@ -67,12 +79,30 @@ const verifyFace = async (baseImageKey, capturedImageKey) => {
       body: JSON.stringify({
         "base_image": await getS3SignedUrlByKey(baseImageKey),
         "captured_image": await getS3SignedUrlByKey(capturedImageKey),
-        "threshold": 0.5
+        "reference_images": await Promise.all(referenceImageKeys.map(key => getS3SignedUrlByKey(key)))
       }),
       signal: AbortSignal.timeout(20000)
     }).then(res => res.json());
 
-    return result.face_matching_percentage ?? 0;
+    switch (result.status) {
+      case "NO_FACE_IN_CAPTURE":
+      case "CAPTURED_IMAGE_UNREADABLE":
+        throw createHttpError(422, "We couldn't see your face clearly. Retake the selfie in good light, facing the camera.", { errors: "Face not detected in selfie" });
+      case "MULTIPLE_FACES_IN_CAPTURE":
+        throw createHttpError(422, "More than one face is in the selfie. Retake it with only you in the frame.", { errors: "Multiple faces in selfie" });
+      case "LOW_QUALITY_CAPTURE":
+        //too dark, blurry, far away or turned away - the face server says what to fix
+        throw createHttpError(422, result.message || "The selfie isn't clear enough. Retake it in good light, facing the camera.", { errors: "Selfie not clear enough" });
+      case "NO_FACE_IN_BASE":
+      case "MULTIPLE_FACES_IN_BASE":
+      case "BASE_IMAGE_UNREADABLE":
+        throw createHttpError(409, "Your profile photo on file doesn't show one clear face. Ask the hostel office to upload a new photo.", { errors: "Student's image has no clear face" });
+      case "PROCESSING_ERROR":
+        throw unavailable();
+    }
+
+    if (typeof result.face_matching_percentage !== "number") throw unavailable();
+    return result.face_matching_percentage;
   } catch (err) {
     if (createHttpError.isHttpError(err)) throw err;
     console.error("Face verification failed:", err);
@@ -157,14 +187,18 @@ const getAttendanceRecords = async (accessContext, attendanceQuery) => {
     }
   };
 
-  if (Number(by_face_matching_percentage) >= 0 && Number(by_face_matching_percentage) <= 100) {
-    attendanceWhere.faceMatchingPercentage = {
+  //face match and outside-hostel filters only narrow the present list; the summary counts ignore them
+  //(otherwise "below 65%" would shrink the Present count and inflate the Absent count)
+  const recordFilters = {};
+  const hasFaceFilter = Number(by_face_matching_percentage) >= 0 && Number(by_face_matching_percentage) <= 100;
+  if (hasFaceFilter) {
+    recordFilters.faceMatchingPercentage = {
       [face_matching_operator]: by_face_matching_percentage
     }
   }
 
   if (is_outside_hostel !== undefined) {
-    attendanceWhere.isLocatedWithinHostelRadius =
+    recordFilters.isLocatedWithinHostelRadius =
       !is_outside_hostel;
   }
 
@@ -194,6 +228,12 @@ const getAttendanceRecords = async (accessContext, attendanceQuery) => {
     ...attendanceWhere,
     student: studentWhere
   }
+  const presentListWhere = { ...attendanceWhere, ...recordFilters };
+
+  //a stable order so pages don't repeat or skip rows; when looking for low face matches, worst first
+  const presentListOrderBy = hasFaceFilter && face_matching_operator.startsWith("l")
+    ? [{ faceMatchingPercentage: "asc" }, { reportedTime: "desc" }, { id: "desc" }]
+    : [{ reportedTime: "desc" }, { id: "desc" }];
 
   //get prisma pagination to query in database
   const prismaPagination = toPrismaPagination(page, pageSize);
@@ -236,8 +276,8 @@ const getAttendanceRecords = async (accessContext, attendanceQuery) => {
   } else {
     [records, totalCount] = await Promise.all(
       [
-        AttendanceRecordRepository.getAttendanceRecordsPresent(attendanceWhere, prismaPagination.skip, prismaPagination.take),
-        AttendanceRecordRepository.getTotalCountOfAttendanceRecordPresent(attendanceWhere)
+        AttendanceRecordRepository.getAttendanceRecordsPresent(presentListWhere, prismaPagination.skip, prismaPagination.take, presentListOrderBy),
+        AttendanceRecordRepository.getTotalCountOfAttendanceRecordPresent(presentListWhere)
       ]
     );
 

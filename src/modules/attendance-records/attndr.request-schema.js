@@ -17,7 +17,8 @@ export const getAllAttendanceRecordRequestQuerySchema = paginationQuerySchema.ex
   by_roll_number: z.string().optional(),
   status: z.enum(["present", "absent"]).optional().default("present"),
   by_face_matching_percentage: z.coerce.number().min(0).max(100).optional(),
-  face_matching_operator: z.enum(["gte", "lte"]).optional().default("lte"),
+  //used as the Prisma operator: lt = "below 65%" (65 itself counts as trusted), gte = "65% or more"
+  face_matching_operator: z.enum(["gte", "gt", "lte", "lt"]).optional().default("lte"),
   is_outside_hostel: z
     .enum(["true", "false"])
     .transform(value => value === "true")

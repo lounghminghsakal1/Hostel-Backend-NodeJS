@@ -8,6 +8,7 @@ import { generateActivationToken, getHashedVersionOfToken } from "../../utils/ac
 import sendEmail from "../../services/email.service.js";
 import { getHasedVersionOfPassword } from "../../utils/password.utils.js";
 import { buildMeta, toPrismaPagination } from "../../utils/pagination.utils.js";
+import { assertStudentPhotoUsable, checkStudentPhoto } from "../../services/face-server.service.js";
 
 const createStudent = async (studentRequestBody, accessContext) => {
   const {
@@ -21,6 +22,9 @@ const createStudent = async (studentRequestBody, accessContext) => {
     roomId
   } = studentRequestBody;
 
+  //the photo on file is what every check-in is compared with, so it must show one clear, front-facing face
+  //(checked before the transaction - it downloads and analyses the photo)
+  if (studentImageKey) await assertStudentPhotoUsable(studentImageKey);
 
   const result = await prisma.$transaction(async (tx) => {
 
@@ -156,6 +160,9 @@ const updateStudentProfile = async (id, updateStudentProfileRequestBody, accessC
   //check whether this student's status is active or not -> if active then only can update else not - college and hostel scope may need or may not 
   const user = await StudentRepository.findUserById(studentProfile.userId);
   if (user.status !== "ACTIVE") throw createHttpError(409, `Student profile is not active, currently its ${user.status}, so if want then change the status of the student profile and update`, { errors: "Student profile is not active" });
+
+  //a new photo must show one clear, front-facing face (see createStudent)
+  if (studentImageKey && studentImageKey !== studentProfile.studentImageKey) await assertStudentPhotoUsable(studentImageKey);
 
   return await prisma.$transaction(async (tx) => {
 
@@ -415,7 +422,14 @@ const forgotPasswordRequest = async (forgotPasswordRequestBody) => {
   return genericResponse;
 };
 
+//admin app: checks a just-uploaded photo before the student is saved, so problems
+//(no face, blurry, dark, turned away, too small, ...) are shown right away
+const checkStudentImage = async (studentImageKey) => {
+  return await checkStudentPhoto(studentImageKey);
+};
+
 const StudentService = {
+  checkStudentImage,
   createStudent,
   getAllStudentProfiles,
   getOneStudentProfileById,

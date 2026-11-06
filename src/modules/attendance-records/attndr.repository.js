@@ -24,9 +24,10 @@ const markAttendance = async (currentDate, capturedImageKey, faceMatchingPercent
   });
 };
 
-const getAttendanceRecordsPresent = async (attendanceWhere, skip, take) => {
+const getAttendanceRecordsPresent = async (attendanceWhere, skip, take, orderBy = [{ reportedTime: "desc" }, { id: "desc" }]) => {
   const result = await prisma.attendanceRecord.findMany({
     where: attendanceWhere,
+    orderBy,
     include: {
       student: {
         select: {
@@ -163,7 +164,23 @@ const findAttendanceOfStudentOnDate = async (studentProfileId, attendanceDate) =
 };
 
 
+//recent check-in selfies of a student that matched their registered photo well
+//(sent to the face server as extra references, so a new beard or haircut doesn't drop the score)
+const getRecentTrustedCapturesOfStudent = async (studentProfileId, sinceDate, minFaceMatchingPercentage, take) => {
+  return await prisma.attendanceRecord.findMany({
+    where: {
+      studentId: studentProfileId,
+      attendanceDate: { gte: sinceDate },
+      faceMatchingPercentage: { gte: minFaceMatchingPercentage }
+    },
+    orderBy: { attendanceDate: "desc" },
+    select: { capturedImageKey: true },
+    take
+  });
+};
+
 const AttendanceRecordRepository = {
+  getRecentTrustedCapturesOfStudent,
   findHostelById,
   findAttendanceOfStudentOnDate,
   markAttendance,

@@ -71,7 +71,13 @@ const forgotPasswordRequest = async (req, res) => {
   return Responses.successResponse(res, "New password setup link has been sent to your email", forgotPasswordResponse);
 };
 
+const checkStudentImage = async (req, res) => {
+  const result = await StudentService.checkStudentImage(req.body.studentImageKey);
+  return Responses.successResponse(res, result.message, result);
+};
+
 const StudentController = {
+  checkStudentImage,
   createStudent,
   getAllStudentProfiles,
   getOneStudentProfile,

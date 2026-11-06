@@ -3,13 +3,16 @@ import authenticateUserMiddleware from "../../middlewares/authentication.middlew
 import authorizeUserMiddleware from "../../middlewares/authorization.middleware.js";
 import StudentController from "./student.controller.js";
 import validateRequestMiddleware from "../../middlewares/validate-request.middleware.js";
-import { changeOrAssignStudentRoomRequestBodySchema, createStudentProfileRequestBodySchema, forgotPasswordRequestBodySchema, getStudentsQuerySchema, sendActivationLinkMailRequestQuerySchema, setupNewPasswordSchema, updateStudentProfileRequestBodySchema, updateStudentStatusRequestBodySchema } from "./student.request-schema.js";
+import { changeOrAssignStudentRoomRequestBodySchema, createStudentProfileRequestBodySchema, forgotPasswordRequestBodySchema, getStudentsQuerySchema, sendActivationLinkMailRequestQuerySchema, setupNewPasswordSchema, updateStudentProfileRequestBodySchema, updateStudentStatusRequestBodySchema, checkStudentImageRequestBodySchema } from "./student.request-schema.js";
 
 const studentRouter = express.Router();
 
 const hostelAdminRole = "HOSTEL_ADMIN";
 
 const studentRole = "STUDENT";
+
+//admin app: check a just-uploaded student photo (one clear, front-facing face) before saving the student
+studentRouter.post("/image_check", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware({body: checkStudentImageRequestBodySchema}), StudentController.checkStudentImage);
 
 studentRouter.post("/", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware({body: createStudentProfileRequestBodySchema}), StudentController.createStudent);
 
