@@ -1,11 +1,16 @@
 import { prisma } from "../../configs/db.js";
 import { getHashedVersionOfToken } from "../../utils/activation-token.utils.js";
 import crypto from "crypto";
+import bcrypt from "bcrypt";
 
+//case-insensitive: an admin may have typed the student's email with capitals
 const findUserByEmail = async (email) => {
-  const user = await prisma.user.findUnique({
+  const user = await prisma.user.findFirst({
     where: {
-      email: email
+      email: {
+        equals: email.trim(),
+        mode: "insensitive"
+      }
     },
     include: {
       role: true
@@ -28,7 +33,6 @@ const createSession = async (userId) => {
 
 
   const result = await prisma.$transaction(async (tx) => {
-      console.log("HERE");
     //session creation
     const createdSession = await tx.authSession.create({
       data: {
@@ -37,7 +41,6 @@ const createSession = async (userId) => {
       }
     });
 
-    console.log("NOT HERE");
 
     //refresh token record creation
     const createdRefreshToken = await tx.refreshToken.create({
@@ -152,15 +155,17 @@ const revokeThisSessionAndThisRefreshTokenOnly = async (refreshTokenFromDb) => {
   });
 };
 
-const isPasswordCorrect = async (userId, currentPasswordHash) => {
+const isPasswordCorrect = async (userId, currentPassword) => {
   const user = await prisma.user.findUnique({
     where: {
-      id: userId,
-      passwordHash: currentPasswordHash
+      id: userId
+    },
+    select: {
+      passwordHash: true
     }
   });
-  if(user) return true;
-  return false;
+  if (!user?.passwordHash) return false;
+  return await bcrypt.compare(currentPassword, user.passwordHash);
 };
 
 const setNewPasswordToUser = async (userId, newPasswordHash) => {

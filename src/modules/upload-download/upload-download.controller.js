@@ -36,12 +36,14 @@ const getPresignedDownloadUrlForAttendanceImage = async (req, res) => {
 
 const getPreSignedUploadUrl = async (req, res) => {
   const imageFor = req.query.media_for;
+  UploadDownloadService.assertCanUpload(imageFor, req.user);
   const preSignedUploadUrl = await UploadDownloadService.getPresignedUploadUrl(imageFor);
   return Responses.successResponse(res, "Presigned upload url generated successfully", preSignedUploadUrl);
 };
 
 const getPreSignedDownloadUrl = async (req, res) => {
   const imageKey = req.query.image_key;
+  await UploadDownloadService.assertCanDownload(imageKey, req.user);
   const preSignedDownlaodUrl = await UploadDownloadService.getPreSignedDownloadUrl(imageKey);
   return Responses.successResponse(res, "Presigned download url generated successfully", preSignedDownlaodUrl);
 };

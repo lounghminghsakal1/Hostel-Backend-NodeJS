@@ -109,6 +109,29 @@ const getOneLeaveApplication = async (id, hostelId) => {
       student: {
         hostelId: hostelId
       }
+    },
+    //same student details as the listing, so the review screen can show who is asking
+    include: {
+      student: {
+        select: {
+          id: true,
+          studentName: true,
+          contactNumber: true,
+          parentMobileNumber: true,
+          rollNumber: true,
+          studentImageKey: true,
+          department: {
+            select: {
+              departmentName: true
+            }
+          },
+          room: {
+            select: {
+              roomNumber: true
+            }
+          }
+        }
+      }
     }
   });
 };
@@ -120,7 +143,8 @@ const reviewLeaveApplication = async (id, status, rejectionReason) => {
     },
     data: {
       status: status,
-      rejectionReason: rejectionReason ?? undefined
+      rejectionReason: rejectionReason ?? undefined,
+      reviewedAt: new Date() //when the admin approved / rejected (shown on the student's timeline)
     }
   });
 };

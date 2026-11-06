@@ -47,6 +47,13 @@ const updateHostel = async (hostelId, updateHostelRequestBody, accessContext) =>
     throw createHttpError(409, "Invalid attendance radius, attendance radius can be between 10m to 10km", {errors: "Invalid attendance radius"});
   }
 
+  //the window must open before it closes on the same day (the window check compares "HH:mm" strings, so it can't cross midnight)
+  const nextStartTime = attendanceMarkingStartTime ?? hostel.attendanceMarkingStartTime;
+  const nextEndTime = attendanceMarkingEndTime ?? hostel.attendanceMarkingEndTime;
+  if (nextStartTime && nextEndTime && nextStartTime >= nextEndTime) {
+    throw createHttpError(422, "Attendance window must open before it closes (same day, e.g. 20:30 to 22:00)", { errors: "Invalid attendance window" });
+  }
+
   const updatedHostel = await HostelRepository.updateHostel(hostelId, hostelName, location, latitude, longitude, contactPersonName, contactNumber, attendanceMarkingStartTime, attendanceMarkingEndTime, attendanceRadius);
   return updatedHostel;
 };
@@ -56,7 +63,7 @@ const getAllHostelsOfLoggedAdminCollege = async (collegeId) => {
 };
 
 const getOneHostel = async (hosteId, loggedInAdminHostelId) => {
-  if (hosteId !== loggedInAdminHostelId) throw createHttpError(401, "You can only access your hostel only", { errors: "Invalid hostel id" });
+  if (hosteId !== loggedInAdminHostelId) throw createHttpError(403, "You can only access your hostel only", { errors: "Invalid hostel id" });
   return await HostelRepository.findHostelById(hosteId);
 };
 

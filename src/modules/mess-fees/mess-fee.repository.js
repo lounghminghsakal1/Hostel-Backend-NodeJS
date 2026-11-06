@@ -61,15 +61,49 @@ const deleteMonthlyMessBill = async (id) => {
   });
 };
 
+//MonthEnum is declared JANUARY..DECEMBER, so ordering by it sorts by calendar month
 const getMonthlyMessBills = async (hostelId) => {
   return await prisma.monthlyMessBill.findMany({
     where: {
       hostelId: hostelId
+    },
+    orderBy: [{ year: "desc" }, { month: "desc" }]
+  });
+};
+
+const findMonthlyMessBillByMonthAndYear = async (hostelId, month, year) => {
+  return await prisma.monthlyMessBill.findFirst({
+    where: { hostelId, month, year },
+    select: { id: true }
+  });
+};
+
+//students only see bills the admin has published (or that have expired), never drafts
+const getPublishedMessBillsOfHostel = async (hostelId, studentProfileId) => {
+  return await prisma.monthlyMessBill.findMany({
+    where: {
+      hostelId,
+      status: { in: ["PUBLISHED", "EXPIRED"] }
+    },
+    orderBy: [{ year: "desc" }, { month: "desc" }],
+    select: {
+      id: true,
+      month: true,
+      year: true,
+      amount: true,
+      lastDate: true,
+      status: true,
+      messFeePayments: {
+        where: { studentProfileId },
+        select: { paidAt: true }
+      }
     }
   });
 };
 
 const MessFeeRepository = {
+  findMonthlyMessBillByMonthAndYear,
+  getPublishedMessBillsOfHostel,
   createMonthlyMessBill,
   getMonthlyMessBillById,
   updateMonthlyMessBill,

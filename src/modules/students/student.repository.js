@@ -1,18 +1,18 @@
 import { prisma } from "../../configs/db.js";
-import { currentDate } from "../../utils/dates.utils.js";
+import { currentDate, currentDateForDb } from "../../utils/dates.utils.js";
 import createHttpError from "http-errors";
 
+//case-insensitive, so "Rohan@College.edu" and "rohan@college.edu" are the same account
 const findUserByEmail = async (tx, email) => {
-  const user = tx ? await tx.user.findUnique({
+  const client = tx ?? prisma;
+  return await client.user.findFirst({
     where: {
-      email: email
+      email: {
+        equals: email.trim(),
+        mode: "insensitive"
+      }
     }
-  }) : await prisma.user.findUnique({
-    where: {
-      email
-    },
   });
-  return user;
 };
 
 const findStudentProfileByContactNumber = async (tx, contactNumber) => {
@@ -71,7 +71,7 @@ const findRoleByRoleName = (tx, roleName) => {
 const createUser = async (tx, email, roleId, collegeId) => {
   return tx.user.create({
     data: {
-      email: email,
+      email: email.trim().toLowerCase(),
       roleId: roleId,
       collegeId: collegeId,
       mustChangePassword: true
@@ -167,7 +167,7 @@ const updateEmailOfUser = async (tx, userId, email) => {
       id: userId
     },
     data: {
-      email: email
+      email: email.trim().toLowerCase()
     },
     select: {
       id: true,
@@ -185,7 +185,14 @@ const findStudentProfileById = async (id, hostelId, collegeId) => {
       collegeId: collegeId
     },
     include: {
-      user: true,
+      //never load passwordHash here: this result is returned by PATCH /students/:id/status
+      user: {
+        select: {
+          id: true,
+          email: true,
+          status: true
+        }
+      },
       room: true
     }
   });
@@ -261,7 +268,38 @@ const getTodayMarkedAttendanceOfStudent = async (studentProfileId) => {
   return await prisma.attendanceRecord.findFirst({
     where: {
       studentId: studentProfileId,
-      attendanceDate: new Date()
+      attendanceDate: currentDateForDb() //IST calendar date, same value markAttendance saves
+    }
+  });
+};
+
+//splash screen -> to tell the student up front that attendance needs a profile photo on file
+const getStudentImageKeyOfStudent = async (studentProfileId) => {
+  const studentProfile = await prisma.studentProfile.findUnique({
+    where: {
+      id: studentProfileId
+    },
+    select: {
+      studentImageKey: true
+    }
+  });
+  return studentProfile?.studentImageKey ?? null;
+};
+
+//splash screen -> approved leave that covers today's (IST) calendar date, if any
+const getApprovedLeaveCoveringToday = async (studentProfileId) => {
+  const today = new Date(`${currentDate()}T00:00:00.000Z`);
+  return await prisma.leaveApplication.findFirst({
+    where: {
+      studentId: studentProfileId,
+      status: "APPROVED",
+      fromDate: { lte: today },
+      toDate: { gte: today }
+    },
+    select: {
+      id: true,
+      fromDate: true,
+      toDate: true
     }
   });
 };
@@ -590,6 +628,8 @@ const StudentRepository = {
   updateRoomOfThestudent,
   getHostelOftheStudent,
   getTodayMarkedAttendanceOfStudent,
+  getStudentImageKeyOfStudent,
+  getApprovedLeaveCoveringToday,
   createAccountSetupTokenRecord,
   findToken,
   setupNewPasswordToUser,

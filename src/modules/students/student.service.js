@@ -2,7 +2,7 @@ import createHttpError from "http-errors";
 import { prisma } from "../../configs/db.js";
 import StudentRepository from "./student.repository.js";
 import bcrypt from "bcrypt";
-import { currentTime } from "../../utils/dates.utils.js";
+import { getAttendanceWindowState } from "../../utils/dates.utils.js";
 import { getS3SignedUrlByKey } from "../../utils/helper-functions.utils.js";
 import { generateActivationToken, getHashedVersionOfToken } from "../../utils/activation-token.utils.js";
 import sendEmail from "../../services/email.service.js";
@@ -79,19 +79,27 @@ const createStudent = async (studentRequestBody, accessContext) => {
     };
   });
 
-  const activationLink = `ourhostel://setup-password?token=${result.rawToken}`;
+  const activationLink = `ourhostel://setup-password?token=${result.rawToken}&mode=welcome`;
   //send email to student containing activation link
-  const emailResponse = await sendEmail(result.createdUser.email, "Account activation for ourhostel.in", "Please click the link to activate your account, the link will be expired in 5 mins",
-    `<div>
-      <h1>Hoooo activate your account </h1>
-      <p>
-        Click this link to activate and setup new password for your account 
-        This will be expired in 5 mins
-        <a href="${activationLink}">${activationLink}</a>.
-      </p> 
-    </div>`)
+  //the student is already created at this point, so a failed email must not turn the response into an error
+  //(the admin can use "resend activation link" from the student's page)
+  let activationEmailSent = true;
+  try {
+    await sendEmail(result.createdUser.email, "Account activation for ourhostel.in", "Please click the link to activate your account, the link will be expired in 5 mins",
+      `<div>
+        <h1>Hoooo activate your account </h1>
+        <p>
+          Click this link to activate and setup new password for your account
+          This will be expired in 5 mins
+          <a href="${activationLink}">${activationLink}</a>.
+        </p>
+      </div>`);
+  } catch (err) {
+    activationEmailSent = false;
+    console.error("Activation email failed for user " + result.createdUser.id, err);
+  }
 
-  return result;
+  return { ...result, activationEmailSent };
 };
 
 
@@ -153,8 +161,9 @@ const updateStudentProfile = async (id, updateStudentProfileRequestBody, accessC
 
     if (email) {
       //check passed email is unique or not 
+      //(the student's own current email is not a conflict)
       const existingUserOfThisEmail = await StudentRepository.findUserByEmail(tx, email);
-      if (existingUserOfThisEmail) throw createHttpError(409, "Email already in use", { errors: "Invalid email" });
+      if (existingUserOfThisEmail && existingUserOfThisEmail.id !== studentProfile.userId) throw createHttpError(409, "Email already in use", { errors: "Invalid email" });
 
       //here, email validation passed so now we can update the email and email present in user model so update it 
       const updatedUser = await StudentRepository.updateEmailOfUser(tx, studentProfile.userId, email);
@@ -163,7 +172,7 @@ const updateStudentProfile = async (id, updateStudentProfileRequestBody, accessC
     if (contactNumber) {
       //contact number is unique field so if passed we should check and update it
       const existingStudentProfileWithThisContactNumber = await StudentRepository.findStudentProfileByContactNumber(tx, contactNumber);
-      if (existingStudentProfileWithThisContactNumber) throw createHttpError(409, "Student profile with this new contact number is already exists", { errors: "Contact number already exists" });
+      if (existingStudentProfileWithThisContactNumber && existingStudentProfileWithThisContactNumber.id !== studentProfile.id) throw createHttpError(409, "Student profile with this new contact number is already exists", { errors: "Contact number already exists" });
 
       //update -> contact number but since all other fields are also in studentprofile entity we can update in 1 query at last after all validations are passed
     }
@@ -190,7 +199,8 @@ const updateStudentProfile = async (id, updateStudentProfileRequestBody, accessC
       //check this room.hostelId belongs to logged in hostel admin's hostel id or not
       if (room.hostelId !== accessContext.loggedInAdminHostelId) throw createHttpError(409, "You cannot assign room which is not belongs to your hostel", { errors: "Invalid room id" });
 
-      if (room.capacity === room._count.studentProfiles) throw createHttpError(409, "Room is already full", { errors: "Invalid room id" });
+      //staying in the same room doesn't need a free bed
+      if (room.id !== studentProfile.roomId && room.capacity <= room._count.studentProfiles) throw createHttpError(409, "Room is already full", { errors: "Invalid room id" });
     }
 
     //ALL validations are passed so update student profile
@@ -207,6 +217,9 @@ const updateStatusOfStudent = async (studentId, status, accessContext) => {
 
   //check the passed status and already student's status is same or not , if same throw error that its already in that staus only
   if (status === student.user.status) throw createHttpError(409, `Student's status is already ${student.user.status}`, { errors: "Invalid status" });
+
+  //a pending student has no password yet, so they can only become ACTIVE by opening the activation link
+  if (student.user.status === "PENDING_ACTIVATION" && status === "ACTIVE") throw createHttpError(409, "This student hasn't activated their account yet. Resend the activation link instead", { errors: "Account not activated" });
 
   const updatedUserProfileOfThatStudent = await StudentRepository.updateStatusOfStudent(student.user.id, status); //here scope may need or may not need - here i didn't do because the user id is get from student.user.id and that student is fetched after passing scope so
   return StudentRepository.findStudentProfileById(studentId, accessContext.loggedInAdminHostelId, accessContext.loggedInAdminCollegeId);
@@ -227,8 +240,10 @@ const changeOrAssignStudentRoom = async (studentId, roomId, accessContext) => {
   //room.hostel id must match with logged admin hostel id
   if (room.hostelId !== accessContext.loggedInAdminHostelId) throw createHttpError(409, `This room doesn't belongs to your hostel`, { errors: "Invalid room id" });
 
-  //check room has capacity or not 
-  if (room._count.studentProfiles === room.capacity) throw createHttpError(409, `Room is alread full (capacity - ${room.capacity})`, { errors: "Room is full" });
+  if (studentProfile.roomId === roomId) throw createHttpError(409, "The student is already in this room", { errors: "Same room" });
+
+  //check room has capacity or not
+  if (room._count.studentProfiles >= room.capacity) throw createHttpError(409, `Room is alread full (capacity - ${room.capacity})`, { errors: "Room is full" });
 
   //ok now room has capacity so now can assign (or change) that room to that student
   const roomAssignedOrChangedStudentProfile = await StudentRepository.updateRoomOfThestudent(studentId, roomId); //here also the passed student id is validated that this is college scoped and hostel scoped because at first line of this service function itself student fetched using this studentId is scoped by college as well as hostel
@@ -244,25 +259,34 @@ const getStudentSplashScreenData = async (accessContext) => {
     throw createHttpError(404, "Hostel not found");
   }
 
-  //if current time lies btw attendance marking start and end time then canMarkAttendance is true
-  let canMarkAttendance;
-  if (currentTime() >= hostel.attendanceMarkingStartTime && currentTime() <= hostel.attendanceMarkingEndTime) {
-    //Now attendance marking window is opened , now check whether student has already marked attendance for today date or not
-    const todayMarkedAttendace = await StudentRepository.getTodayMarkedAttendanceOfStudent(accessContext.loggedInStudentProfileId);
-    if (todayMarkedAttendace) { //already attendance marked
-      canMarkAttendance = false;
-    } else {
-      canMarkAttendance = true;
-    }
-  } else {
-    canMarkAttendance = true; // canMarkAttendance = false; (false is correct but i commented it for testing purpose)
-  }
+  //details the app needs to show the right attendance card (marked / photo needed / on leave / open / not open yet / closed)
+  const [todayMarkedAttendace, studentImageKey, approvedLeaveToday] = await Promise.all([
+    StudentRepository.getTodayMarkedAttendanceOfStudent(accessContext.loggedInStudentProfileId),
+    StudentRepository.getStudentImageKeyOfStudent(accessContext.loggedInStudentProfileId),
+    StudentRepository.getApprovedLeaveCoveringToday(accessContext.loggedInStudentProfileId)
+  ]);
+
+  //where "now" (IST) sits relative to tonight's attendance window (same helper markAttendance uses)
+  const attendanceWindowState = getAttendanceWindowState(hostel.attendanceMarkingStartTime, hostel.attendanceMarkingEndTime);
+
+  //the button shows only while the window is open, the student hasn't marked today and has a profile photo
+  //(to test at other hours, change the window in hostel settings)
+  const canMarkAttendance = attendanceWindowState === "OPEN" && !todayMarkedAttendace && Boolean(studentImageKey);
 
   const announcementsData = await StudentRepository.getAnnouncementsData(accessContext.loggedInStudentHostelId);
   const upcomingEventsData = await StudentRepository.getUpcomingEventsData(accessContext.loggedInStudentHostelId);
 
   return {
     canMarkAttendance,
+    attendanceWindowState,
+    todayAttendance: todayMarkedAttendace ? {
+      id: todayMarkedAttendace.id,
+      reportedTime: todayMarkedAttendace.reportedTime,
+      isLocatedWithinHostelRadius: todayMarkedAttendace.isLocatedWithinHostelRadius,
+      locationDeviationFromHostel: todayMarkedAttendace.locationDeviationFromHostel
+    } : null,
+    hasProfilePhoto: Boolean(studentImageKey),
+    approvedLeaveToday,
     announcements: announcementsData,
     upcomingEvents: upcomingEventsData,
     hostel
@@ -341,7 +365,7 @@ const sendActivationLinkMail = async (accessContext, studentProfileId) => {
 
   await StudentRepository.createAccountSetupTokenRecord(null, student.user.id, hashedToken, expiresAt, "ACCOUNT_ACTIVATION");
 
-  const activationLink = `ourhostel://setup-password?token=${rawToken}`;
+  const activationLink = `ourhostel://setup-password?token=${rawToken}&mode=welcome`;
   //send email to student containing activation link
   const emailResponse = await sendEmail(student.user.email, "Account activation for ourhostel.in", "Please click the link to activate your account, the link will be expired in 5 mins",
     `<div>
@@ -361,35 +385,34 @@ const forgotPasswordRequest = async (forgotPasswordRequestBody) => {
     email
   } = forgotPasswordRequestBody;
 
+  //same answer whether or not the email exists, so this endpoint can't be used to find out who has an account
+  const genericResponse = "If this email belongs to an active account, a password reset link has been sent";
+
   //this is actually user table's record
   const studentInThisEmail = await StudentRepository.findUserByEmail(null, email);
-
-  if (!studentInThisEmail) throw createHttpError(404, "Student profile not found", { errors: "Cannot find" });
-
-  if (!studentInThisEmail.studentProfileId) {
-
-  }
-
-  if (studentInThisEmail.status !== "ACTIVE") throw createHttpError(403, "Your account is not active, contact admin", { errors: "Account not active" });
-
+  if (!studentInThisEmail || studentInThisEmail.status !== "ACTIVE") return genericResponse;
 
   const { rawToken, hashedToken } = generateActivationToken();
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
-  const activationLink = `ourhostel://setup-password?token=${rawToken}`;
+  const activationLink = `ourhostel://setup-password?token=${rawToken}&mode=reset`;
 
-  const accountSetupToken = await StudentRepository.createAccountSetupTokenRecord(null, studentInThisEmail.id, hashedToken, expiresAt, "PASSWORD_RESET");
+  await StudentRepository.createAccountSetupTokenRecord(null, studentInThisEmail.id, hashedToken, expiresAt, "PASSWORD_RESET");
 
-  const emailResponse = await sendEmail(email, "Account activation for ourhostel.in", "Please click the link to activate your account, the link will be expired in 5 mins",
-    `<div>
-      <h1>Heyyyyyyyy setup new password fast </h1>
-      <p>
-        Click this link to setup new password for your account  
-        This will be expired in 5 mins
-        <a href="${activationLink}">${activationLink}</a>.
-      </p> 
-    </div>`)
+  try {
+    await sendEmail(studentInThisEmail.email, "Reset your ourhostel.in password", "Please click the link to set a new password, the link will be expired in 5 mins",
+      `<div>
+        <h1>Reset your password</h1>
+        <p>
+          Click this link to setup new password for your account
+          This will be expired in 5 mins
+          <a href="${activationLink}">${activationLink}</a>.
+        </p>
+      </div>`);
+  } catch (err) {
+    console.error("Password reset email failed for user " + studentInThisEmail.id, err);
+  }
 
-  return "New password setup link email sent";
+  return genericResponse;
 };
 
 const StudentService = {

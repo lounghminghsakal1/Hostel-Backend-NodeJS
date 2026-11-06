@@ -1,8 +1,9 @@
 import createHttpError from "http-errors";
 import AttendanceRecordRepository from "./attndr.repository.js";
 import { buildMeta, paginationQuerySchema, toPrismaPagination } from "../../utils/pagination.utils.js";
-import { currentDate, currentTime, getDateRange, getDatesListBetween } from "../../utils/dates.utils.js";
+import { currentDate, currentDateForDb, getAttendanceWindowState, getDateRange, getDatesListBetween } from "../../utils/dates.utils.js";
 import { getS3SignedUrlByKey } from "../../utils/helper-functions.utils.js";
+import envValues from "../../configs/envFile.js";
 //, getDatesListBetween
 
 const markAttendance = async (accessContext, markAttendanceRequestBody) => {
@@ -16,8 +17,15 @@ const markAttendance = async (accessContext, markAttendanceRequestBody) => {
   const hostel = await AttendanceRecordRepository.findHostelById(accessContext.loggedInStudentHostelId);
   if (!hostel) throw createHttpError(404, `Hostel with hostel id ${accessContext.loggedInStudentHostelId} not found`, { errors: "Invalid request" });
 
-  // if (currentTime() < hostel.attendanceMarkingStartTime) throw createHttpError(422, `Attendance marking time hasn't come yet, wait until ${hostel.attendanceMarkingStartTime}`, { errors: "Invalid request (start time haven't arrived yet)" });
-  // if (currentTime() > hostel.attendanceMarkingEndTime) throw createHttpError(422, `Attendance marking end time (${hostel.attendanceMarkingEndTime}) has already passed`, { errors: "Invalid request (end time passed)" });
+  //attendance can be marked only inside the hostel's window (IST) - same rule the splash screen uses to show the button
+  const windowState = getAttendanceWindowState(hostel.attendanceMarkingStartTime, hostel.attendanceMarkingEndTime);
+  if (windowState === "NOT_OPEN_YET") throw createHttpError(422, `Attendance marking hasn't opened yet, it opens at ${hostel.attendanceMarkingStartTime}`, { errors: "Attendance window not open yet" });
+  if (windowState === "CLOSED") throw createHttpError(422, `Attendance marking closed at ${hostel.attendanceMarkingEndTime}`, { errors: "Attendance window closed" });
+
+  //one record per student per day (IST calendar date) - check before calling the face verification server
+  const todayIst = currentDateForDb();
+  const alreadyMarked = await AttendanceRecordRepository.findAttendanceOfStudentOnDate(accessContext.loggedInStudentProfileId, todayIst);
+  if (alreadyMarked) throw createHttpError(409, "Attendance is already marked for today", { errors: "Attendance already marked" });
 
   //latitude and longitude processing
   const locationDeviationFromHostel = calculateDistanceFromHostelInMeters(latitude, longitude, hostel);
@@ -33,37 +41,43 @@ const markAttendance = async (accessContext, markAttendanceRequestBody) => {
     throw createHttpError(409, "Student image is not uploaded yet, ask your hostel manager for details", { errors: "Student's image not uploaded" });
   }
 
-  //check whether face verfication server(python fast api server is running or not)
-  const faceVerfificationServerResponse = await fetch("http://127.0.0.1:8000/health", {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json"
-    }
-  }).then(res => res.json());
+  faceMatchingPercentage = await verifyFace(student.studentImageKey, capturedImageKey);
 
-  if (faceVerfificationServerResponse.model_loaded === false) {
-    throw createHttpError(500, "Face verification python fast api server is not running", { errors: "Python fast api - Face verification server error" });
-  }
-
-  const resultOfFaceVerification = await fetch("http://127.0.0.1:8000/face/verify", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      "base_image": await getS3SignedUrlByKey(student.studentImageKey),
-      "captured_image": await getS3SignedUrlByKey(capturedImageKey),
-      "threshold": 0.5
-    })
-  }).then(res => res.json());
-
-  faceMatchingPercentage = resultOfFaceVerification.face_matching_percentage ?? 0;
-
-  console.log(resultOfFaceVerification);
   //creating attendance record in DB
-  const createdAttendanceRecord = await AttendanceRecordRepository.markAttendance(new Date(), capturedImageKey, faceMatchingPercentage, latitude, longitude, isLocatedWithinHostelRadius, locationDeviationFromHostel, accessContext.loggedInStudentProfileId);
+  const createdAttendanceRecord = await AttendanceRecordRepository.markAttendance(todayIst, capturedImageKey, faceMatchingPercentage, latitude, longitude, isLocatedWithinHostelRadius, locationDeviationFromHostel, accessContext.loggedInStudentProfileId);
 
   return createdAttendanceRecord;
+};
+
+//calls the python fast api face verification server and returns the matching percentage
+//if the server is down or slow, the student gets a clear 503 instead of an internal error
+const verifyFace = async (baseImageKey, capturedImageKey) => {
+  const faceServerUrl = (envValues.FACE_VERIFICATION_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
+  const unavailable = () => createHttpError(503, "Face verification is unavailable right now, please try again in a few minutes", { errors: "Face verification server unavailable" });
+
+  try {
+    const health = await fetch(`${faceServerUrl}/health`, { signal: AbortSignal.timeout(5000) }).then(res => res.json());
+    if (health.model_loaded === false) throw unavailable();
+
+    const result = await fetch(`${faceServerUrl}/face/verify`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        "base_image": await getS3SignedUrlByKey(baseImageKey),
+        "captured_image": await getS3SignedUrlByKey(capturedImageKey),
+        "threshold": 0.5
+      }),
+      signal: AbortSignal.timeout(20000)
+    }).then(res => res.json());
+
+    return result.face_matching_percentage ?? 0;
+  } catch (err) {
+    if (createHttpError.isHttpError(err)) throw err;
+    console.error("Face verification failed:", err);
+    throw unavailable();
+  }
 };
 
 const calculateDistanceFromHostelInMeters = (latitude, longitude, hostel) => {

@@ -1,7 +1,6 @@
 import createHttpError from "http-errors";
 import RoomsRepository from "./room.repository.js";
 import { buildMeta, toPrismaPagination } from "../../utils/pagination.utils.js";
-import { skip } from "@prisma/client/runtime/client";
 
 const createRoom = async (accessContext, roomNumber, capacity) => {
   // room number must be unique within that hostel, so checking it now

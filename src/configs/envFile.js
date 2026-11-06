@@ -13,7 +13,11 @@ const envValues = {
   AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
   AWS_REGION: process.env.AWS_REGION,
   AWS_S3_BUCKET_NAME: process.env.AWS_S3_BUCKET_NAME,
-  AWS_SES_FROM_EMAIL: process.env.AWS_SES_FROM_EMAIL
+  AWS_SES_FROM_EMAIL: process.env.AWS_SES_FROM_EMAIL,
+  //optional: comma separated web origins allowed by CORS (defaults to localhost:3000/3001)
+  CORS_ORIGINS: process.env.CORS_ORIGINS,
+  //optional: python face verification server (defaults to http://127.0.0.1:8000)
+  FACE_VERIFICATION_URL: process.env.FACE_VERIFICATION_URL
 };
 
 export default envValues;

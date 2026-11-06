@@ -189,12 +189,12 @@ const changePassword = async (accessContext, changePasswordRequestBody) => {
     newPassword
   } = changePasswordRequestBody;
 
-  //check currentPassword is correct or not
-  const isPasswordCorrect = await AuthRepository.isPasswordCorrect(accessContext?.userId, getHasedVersionOfPassword(currentPassword));
+  //check currentPassword is correct or not (bcrypt hashes are salted, so compare instead of matching a fresh hash)
+  const isPasswordCorrect = await AuthRepository.isPasswordCorrect(accessContext?.userId, currentPassword);
   if(!isPasswordCorrect) throw createHttpError(400, "Invalid current password", {errors: "Invalid current password"});
 
-  //set new password 
-  await AuthRepository.setNewPasswordToUser(accessContext.userId, getHasedVersionOfPassword(newPassword));
+  //set new password (getHasedVersionOfPassword is async, so await it before saving)
+  await AuthRepository.setNewPasswordToUser(accessContext.userId, await getHasedVersionOfPassword(newPassword));
 
   return "Password updated";
 };

@@ -9,6 +9,10 @@ import validateHostelAdminAccessScope from "../../middlewares/validate-admin-acc
 const MessFeeRouter = express.Router();
 
 const hostelAdminRole = "HOSTEL_ADMIN";
+const studentRole = "STUDENT";
+
+//student: published bills of their hostel + how to pay (online payment not available yet)
+MessFeeRouter.get("/my_bills", authenticateUserMiddleware, authorizeUserMiddleware(studentRole), MessFeeController.getMyMessBills);
 
 MessFeeRouter.post("/mess_bill", authenticateUserMiddleware, authorizeUserMiddleware(hostelAdminRole), validateRequestMiddleware({body: createMonthlyMessBillRequestBodySchema}), MessFeeController.createMonthlyMessBill);
 

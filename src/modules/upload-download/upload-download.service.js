@@ -4,6 +4,7 @@ import envValues from "../../configs/envFile.js";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import s3Client from "../../configs/s3.js";
 import createHttpError from "http-errors";
+import { prisma } from "../../configs/db.js";
 
 const uploadAttendanceImage = async (capturedFile) => {
   const urlFromStorageService = await StorageService.upload(capturedFile);
@@ -120,6 +121,29 @@ const getPreSignedDownloadUrl = async (imageKey) => {
   };
 };
 
+//students upload only attendance selfies; admins upload student photos and event images
+const UPLOAD_PURPOSES_BY_ROLE = {
+  STUDENT: ["attendance_image"],
+  HOSTEL_ADMIN: ["student_image", "event_image"]
+};
+
+const assertCanUpload = (mediaFor, user) => {
+  const allowed = UPLOAD_PURPOSES_BY_ROLE[user.role.roleName] ?? [];
+  if (!allowed.includes(mediaFor)) throw createHttpError(403, `You can't upload ${mediaFor}`, { errors: "Upload not allowed" });
+};
+
+//students may only open event images and their own profile photo, not other students' photos or selfies
+const assertCanDownload = async (imageKey, user) => {
+  if (user.role.roleName !== "STUDENT") return;
+  if (imageKey.startsWith("event_image/") || imageKey.startsWith("events/")) return;
+  const ownProfile = await prisma.studentProfile.findUnique({
+    where: { id: user.studentProfile?.id ?? -1 },
+    select: { studentImageKey: true }
+  });
+  if (ownProfile?.studentImageKey && ownProfile.studentImageKey === imageKey) return;
+  throw createHttpError(403, "You don't have access to this image", { errors: "Image access denied" });
+};
+
 const UploadDownloadService = {
   uploadAttendanceImage,
   uploadStudentProfileImage,
@@ -129,6 +153,8 @@ const UploadDownloadService = {
   getPresignedDownloadUrlForAttendanceImage,
   getPresignedUploadUrl,
   getPreSignedDownloadUrl,
+  assertCanUpload,
+  assertCanDownload,
 };
 
 export default UploadDownloadService;

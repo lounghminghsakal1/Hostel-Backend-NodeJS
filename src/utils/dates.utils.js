@@ -25,6 +25,24 @@ const kolkataDateFormatter = new Intl.DateTimeFormat("en-CA", {
 //takes date only and gives it as string in the format we configured above
 export const currentDate = () => kolkataDateFormatter.format(new Date());
 
+//today's IST calendar date as the value Prisma stores in @db.Date columns (UTC midnight of that day)
+//use this instead of new Date() for date-only columns, otherwise 12:00 AM - 5:29 AM IST is saved as the previous day
+export const currentDateForDb = () => new Date(`${currentDate()}T00:00:00.000Z`);
+
+//where "now" (IST, "HH:mm") sits relative to a hostel's attendance window ("HH:mm" strings, zero padded so string comparison works)
+export const getAttendanceWindowState = (startTime, endTime, now = currentTime()) => {
+  if (now < startTime) return "NOT_OPEN_YET";
+  if (now > endTime) return "CLOSED";
+  return "OPEN";
+};
+
+//current and next month in IST, e.g. [{ month: 11, year: 2026 }, { month: 12, year: 2026 }] (month is 1-12)
+export const getCurrentAndNextMonth = () => {
+  const [year, month] = currentDate().split("-").map(Number);
+  const next = month === 12 ? { month: 1, year: year + 1 } : { month: month + 1, year };
+  return [{ month, year }, next];
+};
+
 export const getDateRange = (fromDate, toDate = fromDate) => {
   //here fromDate and toDate comes from query param which is string so if we pass that to new Date() we get date object which we can use it for db filters, because prisma expects date object for filtering date type columns
   const startDate = new Date(`${fromDate}T00:00:00.000Z`); //here attaching time as 00 (midnight) so that it converted correctly

@@ -34,10 +34,17 @@ const getMonthlyMessBills = async (req, res) => {
 };
 
 const getOneMonthlyMessBill = async (req, res) => {
-  return Responses.successResponse(res, "Monthly mess bill fetched successfully", req.model);
+  return Responses.successResponse(res, "Monthly mess bill fetched successfully", MessFeeService.withBillActions(req.model));
+};
+
+const getMyMessBills = async (req, res) => {
+  const accessContext = getAccessContext(req);
+  const myMessBills = await MessFeeService.getMyMessBills(accessContext);
+  return Responses.successResponse(res, "Mess bills fetched successfully", myMessBills);
 };
 
 const MessFeeController = {
+  getMyMessBills,
   createMonthlyMessBill,
   updateMonthlyMessBill,
   publishMonthlyMessBill,

@@ -16,6 +16,8 @@ const createUpcomingEvent = async (accessContext, createUpcomingEventRequestBody
     contactPersonPhone
   } = createUpcomingEventRequestBody;
 
+  if (startingAt >= endingAt) throw createHttpError(422, "The event must end after it starts", { errors: "Invalid date range" });
+
   const hostelId = accessContext.loggedInAdminHostelId;
   const createdUpcomingEvent = await UpcomingEventsRepository.createUpcomingEvent(eventName, eventDescription, startingAt, endingAt, eventImageKey, eventLink, contactPersonName, contactPersonPhone, hostelId);
 

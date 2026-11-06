@@ -149,9 +149,23 @@ const totalCountOfStudentsInOneHostel = async (hostelId) => {
   });
 };
 
+//attendanceDate must be the IST calendar date as a db date (see currentDateForDb)
+const findAttendanceOfStudentOnDate = async (studentProfileId, attendanceDate) => {
+  return await prisma.attendanceRecord.findFirst({
+    where: {
+      studentId: studentProfileId,
+      attendanceDate
+    },
+    select: {
+      id: true
+    }
+  });
+};
+
 
 const AttendanceRecordRepository = {
   findHostelById,
+  findAttendanceOfStudentOnDate,
   markAttendance,
   getAttendanceRecordsPresent,
   getTotalCountOfAttendanceRecordPresent,

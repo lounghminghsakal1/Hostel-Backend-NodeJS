@@ -23,10 +23,11 @@ const prefix_api = envValues.API_PREFIX;
 
 app.use(express.json());
 
-const allowedOrigins = [
-  "http://localhost:3000",
-  "http://localhost:3001"
-];
+//web frontends allowed to call the API: CORS_ORIGINS in .env, comma separated (mobile apps don't need CORS)
+//e.g. CORS_ORIGINS=https://staging.ourhostel.in,http://localhost:3000
+const allowedOrigins = envValues.CORS_ORIGINS
+  ? envValues.CORS_ORIGINS.split(",").map(origin => origin.trim()).filter(Boolean)
+  : ["http://localhost:3000", "http://localhost:3001"];
 
 app.use(cors({
   origin: allowedOrigins
