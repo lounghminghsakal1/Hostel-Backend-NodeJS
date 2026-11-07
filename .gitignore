@@ -1,5 +1,7 @@
 node_modules/
 .env
+# your EC2 address and SSH key path for `npm run deploy` (never commit it)
+.env.deploy
 /src/generated/prisma
 uploaded-files/
 

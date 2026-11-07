@@ -47,9 +47,9 @@ const getStudentSplashScreenData = async (req, res) => {
   return Responses.successResponse(res, "Student home screen data fetched successfully", {...splashScreenData, user: req.user});
 }; 
 
+//public route (opened from the emailed link, the student isn't signed in): the token in the body identifies the user
 const setupNewPassword = async (req, res) => {
-  const accessContext = getAccessContext(req);
-  const setupNewPasswordResponse = await StudentService.setupNewPassword(accessContext, req.body);
+  const setupNewPasswordResponse = await StudentService.setupNewPassword(null, req.body);
   return Responses.successResponse(res, "New password set successfully", setupNewPasswordResponse, 201);
 };
 

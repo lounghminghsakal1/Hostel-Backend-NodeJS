@@ -8,7 +8,8 @@
     "prisma:migrate": "",
     "prisma:generate": "npx prisma generate",
     "prisma:seed": "node prisma/seed.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "deploy": "node scripts/deploy/deploy.mjs"
   },
   "type": "module",
   "keywords": [],

@@ -13,7 +13,8 @@ export const getAccessContext = (req) => {
     loggedInStudentProfileId: req.user?.studentProfile?.id ?? null,
     loggedInHostelAdminProfileId: req.user?.hostelAdminProfile?.id ?? null,
 
-    userId: req.user.id,
+    //null on public routes (no signed-in user) instead of crashing
+    userId: req.user?.id ?? null,
   };
 };
 

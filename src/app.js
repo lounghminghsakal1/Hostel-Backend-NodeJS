@@ -17,6 +17,7 @@ import MessFeeRouter from "./modules/mess-fees/mess-fee.routes.js";
 import cors from "cors";
 import announcementRouter from "./modules/announcements/announcement.routes.js";
 import appLinksRouter from "./modules/app-links/app-links.routes.js";
+import healthRouter from "./modules/health/health.routes.js";
 
 const app = express();
 
@@ -65,6 +66,9 @@ app.use(`${prefix_api}/announcements`, announcementRouter);
 
 //public pages behind the links in activation / reset emails (opens the app), and Android App Links verification
 app.use(appLinksRouter);
+
+//GET /health: is the app up and can it reach the database (the deploy script waits for this)
+app.use(healthRouter);
 
 app.use(gloabalErrorHandlerMiddleware);
 
