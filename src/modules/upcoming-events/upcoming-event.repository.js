@@ -45,9 +45,10 @@ const updateUpcomingEvent = async (id, eventName, eventDescription, startingAt, 
   });
 };
 
-const getAllUpcomingEvents = async (upcomingEventsWhere, skip,take) => {
+const getAllUpcomingEvents = async (upcomingEventsWhere, skip, take, orderBy = [{ startingAt: "desc" }, { id: "desc" }]) => {
   return await prisma.upcomingEvent.findMany({
     where: upcomingEventsWhere,
+    orderBy,
     skip,
     take
   });

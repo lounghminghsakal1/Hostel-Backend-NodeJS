@@ -33,6 +33,8 @@ export const getAnnouncementRequestQuerySchema = paginationQuerySchema.extend({
   from_date: z.iso.date().transform(value => new Date(`${value}T00:00:00.000Z`)).optional(),
   to_date: z.iso.date().transform(value => new Date(`${value}T00:00:00.000Z`)).optional(),
   by_announcement_type: z.enum(["COLLEGE_ANNOUNCEMENT", "HOSTEL_ANNOUNCEMENT", "OTHER"]).optional(),
-  only_important: z.enum(["true", "false"]).transform(value => value === "true").optional()
+  only_important: z.enum(["true", "false"]).transform(value => value === "true").optional(),
+  //admin: live (students see it now) | scheduled | expired | off - see notice-visibility.utils.js
+  visibility: z.enum(["live", "scheduled", "expired", "off"]).optional()
 });
 

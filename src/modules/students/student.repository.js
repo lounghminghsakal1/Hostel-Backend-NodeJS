@@ -1,4 +1,5 @@
 import { prisma } from "../../configs/db.js";
+import { liveAnnouncementWhere, visibleEventWhere } from "../../utils/notice-visibility.utils.js";
 import { currentDate, currentDateForDb } from "../../utils/dates.utils.js";
 import createHttpError from "http-errors";
 
@@ -250,6 +251,14 @@ const updateRoomOfThestudent = async (studentId, roomId) => {
   });
 };
 
+//for greeting the student by name in emails
+const getStudentNameByUserId = async (userId) => {
+  return await prisma.studentProfile.findFirst({
+    where: { userId },
+    select: { studentName: true }
+  });
+};
+
 const getHostelOftheStudent = async (hostelIdOfStudent) => {
   return await prisma.hostel.findUnique({
     where: {
@@ -381,35 +390,28 @@ const getAllDepartments = async (collegeId) => {
   });
 };
 
+//student home: live announcements only (switched on, today between start and end date) - same rule as the notices list
 const getAnnouncementsData = async (hostelId) => {
-  const today = new Date(`${currentDate()}T00:00:00.000Z`);
-
   return await prisma.announcement.findMany({
     where: {
       hostelId: hostelId,
-      status: "ACTIVE",
-      startDate: {
-        lte: today
-      },
-      endDate: {
-        gte: today
-      }
+      ...liveAnnouncementWhere()
     },
     take: 5,
-    orderBy: {
-      isImportant: "desc"
-    }
+    orderBy: [
+      { isImportant: "desc" },
+      { startDate: "desc" },
+      { id: "desc" }
+    ]
   });
 };
 
+//student home: events switched on that haven't ended (happening now or coming up), soonest first
 const getUpcomingEventsData = async (hostelId) => {
   return await prisma.upcomingEvent.findMany({
     where: {
       hostelId,
-      isActive: true,
-      endingAt: {
-        gte: new Date()
-      }
+      ...visibleEventWhere()
     },
     orderBy: [
       { startingAt: "asc" },
@@ -610,6 +612,7 @@ const consumeAccountTokenAndSetPassword = async (
 };
 
 const StudentRepository = {
+  getStudentNameByUserId,
   findUserByEmail,
   findStudentProfileByContactNumber,
   findDepartmentById,

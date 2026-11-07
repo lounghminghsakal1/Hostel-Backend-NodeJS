@@ -8,11 +8,13 @@ const createAnnouncement = async (announcementData) => {
   return announcement;
 };
 
-const getAnnouncementById = async (id, hostelId) => {
-  const announcement = await prisma.announcement.findUnique({
+//extraWhere: e.g. only live announcements for students
+const getAnnouncementById = async (id, hostelId, extraWhere = {}) => {
+  const announcement = await prisma.announcement.findFirst({
     where: {
       id: Number(id),
-      hostelId
+      hostelId,
+      ...extraWhere
     },
   });
 
@@ -40,9 +42,10 @@ const deleteAnnouncement = async (id) => {
   return announcement;
 };
 
-const getAnnouncements = async (announcementsWhere, skip, take) => {
+const getAnnouncements = async (announcementsWhere, skip, take, orderBy = [{ startDate: "desc" }, { id: "desc" }]) => {
   const announcements = await prisma.announcement.findMany({
     where: announcementsWhere,
+    orderBy,
     skip, take
   });
 

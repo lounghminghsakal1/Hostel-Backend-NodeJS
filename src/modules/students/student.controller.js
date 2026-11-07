@@ -4,11 +4,11 @@ import { getAccessContext } from "../../utils/helper-functions.utils.js";
 
 const createStudent = async (req, res, next) => {
   const accessContext = getAccessContext(req);
-  const { createdStudentProfile, activationEmailSent } = await StudentService.createStudent(req.body, accessContext);
+  const { createdStudentProfile, activationEmailSent, activationEmailError } = await StudentService.createStudent(req.body, accessContext);
   const message = activationEmailSent
     ? "Student created successfully"
-    : "Student created, but the activation email could not be sent. Use resend activation link.";
-  return Responses.successResponse(res, message, { ...createdStudentProfile, activationEmailSent }, 201);
+    : `Student created, but the activation email couldn't be sent: ${activationEmailError}. Use "Resend activation link" once it's fixed.`;
+  return Responses.successResponse(res, message, { ...createdStudentProfile, activationEmailSent, activationEmailError }, 201);
 };
 
 const getAllStudentProfiles = async (req, res) => {

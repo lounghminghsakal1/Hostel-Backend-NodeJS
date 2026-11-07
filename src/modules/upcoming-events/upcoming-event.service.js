@@ -1,7 +1,7 @@
 import createHttpError from "http-errors";
 import UpcomingEventsRepository from "./upcoming-event.repository.js";
 import { getDateRange } from "../../utils/dates.utils.js";
-import { gte, lte } from "zod";
+import { isStudentRequest, visibleEventWhere } from "../../utils/notice-visibility.utils.js";
 import { buildMeta, toPrismaPagination } from "../../utils/pagination.utils.js";
 
 const createUpcomingEvent = async (accessContext, createUpcomingEventRequestBody) => {
@@ -79,10 +79,7 @@ const getAllUpcomingEvents = async (accessContext, getUpcomingEventsQuery) => {
       mode: "insensitive"
     }
   }
-  if (is_active) {
-    upcomingEventsWhere.isActive = is_active;
-  }
-  if (!is_active) {
+  if (is_active !== undefined) {
     upcomingEventsWhere.isActive = is_active;
   }
   if (to_date && !from_date) throw createHttpError(422, "Provide both date filters or from date only which takes to date as today", { errors: "Invalid date filter query params" });
@@ -97,9 +94,16 @@ const getAllUpcomingEvents = async (accessContext, getUpcomingEventsQuery) => {
     }
   }
 
+  //students only see events that are switched on and haven't ended (happening now or coming up), soonest first;
+  //admins see everything, newest first
+  const forStudent = isStudentRequest(accessContext);
+  if (forStudent) Object.assign(upcomingEventsWhere, visibleEventWhere());
+  const orderBy = forStudent
+    ? [{ startingAt: "asc" }, { id: "asc" }]
+    : [{ startingAt: "desc" }, { id: "desc" }];
+
   const prismaPagination = toPrismaPagination(page, pageSize);
-  // const hostelId = accessContext.loggedInAdminHostelId ?? accessContext.loggedInStudentHostelId;
-  const [allUpcomingEvents, totalCount] = await Promise.all([UpcomingEventsRepository.getAllUpcomingEvents(upcomingEventsWhere, prismaPagination.skip, prismaPagination.take), UpcomingEventsRepository.getTotoalOfUpcomingEvents(upcomingEventsWhere)]);
+  const [allUpcomingEvents, totalCount] = await Promise.all([UpcomingEventsRepository.getAllUpcomingEvents(upcomingEventsWhere, prismaPagination.skip, prismaPagination.take, orderBy), UpcomingEventsRepository.getTotoalOfUpcomingEvents(upcomingEventsWhere)]);
 
   const paginationMeta = buildMeta(page, pageSize, totalCount);
 
@@ -110,6 +114,10 @@ const getOneUpcomingEvent = async (accessContext, id) => {
   const hostelId = accessContext.loggedInAdminHostelId ?? accessContext.loggedInStudentHostelId;
   const upcomingEvent = await UpcomingEventsRepository.findUpcomingEventById(id, hostelId);
   if (!upcomingEvent) throw createHttpError(404, "Upcoming event with id " + id + " not found", { errors: "Invalid id" });
+  //students can't open hidden or finished events
+  if (isStudentRequest(accessContext) && (!upcomingEvent.isActive || upcomingEvent.endingAt <= new Date())) {
+    throw createHttpError(404, "This event is no longer available", { errors: "Event not visible" });
+  }
   return upcomingEvent;
 };
 

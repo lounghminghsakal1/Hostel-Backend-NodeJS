@@ -1,4 +1,5 @@
 import createHttpError from "http-errors";
+import { announcementVisibilityWhere, isStudentRequest, liveAnnouncementWhere } from "../../utils/notice-visibility.utils.js";
 import AnnouncementRepository from "./announcement.repository.js";
 import { getDateRange } from "../../utils/dates.utils.js";
 import { gte, lte } from "zod";
@@ -20,6 +21,7 @@ const getAnnouncements = async (accessContext, getAnnouncementsQuery) => {
     to_date,
     by_announcement_type,
     only_important,
+    visibility,
     page, pageSize
   } = getAnnouncementsQuery;
 
@@ -41,19 +43,27 @@ const getAnnouncements = async (accessContext, getAnnouncementsQuery) => {
     announcementsWhere.endDate = { lte: to_date };
   }
 
+  //students only ever see live announcements (switched on, today between start and end date);
+  //admins can filter by live / scheduled / expired / off
+  const forStudent = isStudentRequest(accessContext);
+  Object.assign(announcementsWhere, forStudent ? liveAnnouncementWhere() : announcementVisibilityWhere(visibility));
+  const orderBy = forStudent
+    ? [{ isImportant: "desc" }, { startDate: "desc" }, { id: "desc" }]
+    : [{ startDate: "desc" }, { id: "desc" }];
+
   const prismaPagination = toPrismaPagination(page, pageSize);
 
 
   const { announcements, totalAnnouncementsCount } =
-    await AnnouncementRepository.getAnnouncements(announcementsWhere, prismaPagination.skip, prismaPagination.take);
+    await AnnouncementRepository.getAnnouncements(announcementsWhere, prismaPagination.skip, prismaPagination.take, orderBy);
 
   const paginationMeta = buildMeta(page, pageSize, totalAnnouncementsCount);
   return { announcements, paginationMeta };
 };
 
-const getAnnouncementById = async (id, hostelId) => {
+const getAnnouncementById = async (id, hostelId, forStudent = false) => {
   const announcement =
-    await AnnouncementRepository.getAnnouncementById(id, hostelId);
+    await AnnouncementRepository.getAnnouncementById(id, hostelId, forStudent ? liveAnnouncementWhere() : {});
 
   if (!announcement) {
     throw createHttpError(

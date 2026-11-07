@@ -5,7 +5,9 @@ import bcrypt from "bcrypt";
 import { getAttendanceWindowState } from "../../utils/dates.utils.js";
 import { getS3SignedUrlByKey } from "../../utils/helper-functions.utils.js";
 import { generateActivationToken, getHashedVersionOfToken } from "../../utils/activation-token.utils.js";
-import sendEmail from "../../services/email.service.js";
+import sendEmail, { describeEmailError } from "../../services/email.service.js";
+import { accountActivationEmail, passwordResetEmail } from "../../services/email-templates.js";
+import { ACTIVATION_LINK_TTL_MS, PASSWORD_RESET_LINK_TTL_MS, formatIstDateTime, setupPasswordLink } from "../../utils/app-links.utils.js";
 import { getHasedVersionOfPassword } from "../../utils/password.utils.js";
 import { buildMeta, toPrismaPagination } from "../../utils/pagination.utils.js";
 import { assertStudentPhotoUsable, checkStudentPhoto } from "../../services/face-server.service.js";
@@ -72,38 +74,39 @@ const createStudent = async (studentRequestBody, accessContext) => {
 
     //create account setup token record and send email to student containing the activation link (page_route?token=GeneratedToken) 
     const { rawToken, hashedToken } = generateActivationToken();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+    const expiresAt = new Date(Date.now() + ACTIVATION_LINK_TTL_MS);
 
     await StudentRepository.createAccountSetupTokenRecord(tx, createdUser.id, hashedToken, expiresAt, "ACCOUNT_ACTIVATION");
 
     return {
       createdUser,
       createdStudentProfile,
-      rawToken
+      rawToken,
+      expiresAt,
+      hostelName: hostel?.hostelName
     };
   });
 
-  const activationLink = `ourhostel://setup-password?token=${result.rawToken}&mode=welcome`;
   //send email to student containing activation link
   //the student is already created at this point, so a failed email must not turn the response into an error
   //(the admin can use "resend activation link" from the student's page)
+  const activationEmail = accountActivationEmail({
+    studentName: result.createdStudentProfile.studentName,
+    hostelName: result.hostelName,
+    link: setupPasswordLink(result.rawToken, "welcome"),
+    expiresAt: formatIstDateTime(result.expiresAt),
+  });
   let activationEmailSent = true;
+  let activationEmailError = null;
   try {
-    await sendEmail(result.createdUser.email, "Account activation for ourhostel.in", "Please click the link to activate your account, the link will be expired in 5 mins",
-      `<div>
-        <h1>Hoooo activate your account </h1>
-        <p>
-          Click this link to activate and setup new password for your account
-          This will be expired in 5 mins
-          <a href="${activationLink}">${activationLink}</a>.
-        </p>
-      </div>`);
+    await sendEmail(result.createdUser.email, activationEmail.subject, activationEmail.text, activationEmail.html);
   } catch (err) {
     activationEmailSent = false;
+    activationEmailError = describeEmailError(err);
     console.error("Activation email failed for user " + result.createdUser.id, err);
   }
 
-  return { ...result, activationEmailSent };
+  return { createdUser: result.createdUser, createdStudentProfile: result.createdStudentProfile, activationEmailSent, activationEmailError };
 };
 
 
@@ -368,21 +371,24 @@ const sendActivationLinkMail = async (accessContext, studentProfileId) => {
 
   //can send mail now 
   const { rawToken, hashedToken } = generateActivationToken();
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + ACTIVATION_LINK_TTL_MS);
 
   await StudentRepository.createAccountSetupTokenRecord(null, student.user.id, hashedToken, expiresAt, "ACCOUNT_ACTIVATION");
 
-  const activationLink = `ourhostel://setup-password?token=${rawToken}&mode=welcome`;
-  //send email to student containing activation link
-  const emailResponse = await sendEmail(student.user.email, "Account activation for ourhostel.in", "Please click the link to activate your account, the link will be expired in 5 mins",
-    `<div>
-      <h1>Hoooo activate your account </h1>
-      <p>
-        Click this link to activate and setup new password for your account 
-        This will be expired in 5 mins
-        <a href="${activationLink}">${activationLink}</a>.
-      </p> 
-    </div>`)
+  const hostel = await StudentRepository.getHostelOftheStudent(student.hostelId);
+  const activationEmail = accountActivationEmail({
+    studentName: student.studentName,
+    hostelName: hostel?.hostelName,
+    link: setupPasswordLink(rawToken, "welcome"),
+    expiresAt: formatIstDateTime(expiresAt),
+  });
+  try {
+    await sendEmail(student.user.email, activationEmail.subject, activationEmail.text, activationEmail.html);
+  } catch (err) {
+    console.error("Activation email failed for user " + student.user.id, err);
+    //tell the admin why (e.g. Amazon SES still in sandbox mode) instead of "something went wrong"
+    throw createHttpError(502, `Couldn't send the activation email: ${describeEmailError(err)}.`, { errors: "Email not sent" });
+  }
 
   return "Account activation email sent";
 };
@@ -400,21 +406,19 @@ const forgotPasswordRequest = async (forgotPasswordRequestBody) => {
   if (!studentInThisEmail || studentInThisEmail.status !== "ACTIVE") return genericResponse;
 
   const { rawToken, hashedToken } = generateActivationToken();
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
-  const activationLink = `ourhostel://setup-password?token=${rawToken}&mode=reset`;
+  const expiresAt = new Date(Date.now() + PASSWORD_RESET_LINK_TTL_MS);
 
   await StudentRepository.createAccountSetupTokenRecord(null, studentInThisEmail.id, hashedToken, expiresAt, "PASSWORD_RESET");
 
+  const profile = await StudentRepository.getStudentNameByUserId(studentInThisEmail.id);
+  const resetEmail = passwordResetEmail({
+    studentName: profile?.studentName,
+    email: studentInThisEmail.email,
+    link: setupPasswordLink(rawToken, "reset"),
+    expiresAt: formatIstDateTime(expiresAt),
+  });
   try {
-    await sendEmail(studentInThisEmail.email, "Reset your ourhostel.in password", "Please click the link to set a new password, the link will be expired in 5 mins",
-      `<div>
-        <h1>Reset your password</h1>
-        <p>
-          Click this link to setup new password for your account
-          This will be expired in 5 mins
-          <a href="${activationLink}">${activationLink}</a>.
-        </p>
-      </div>`);
+    await sendEmail(studentInThisEmail.email, resetEmail.subject, resetEmail.text, resetEmail.html);
   } catch (err) {
     console.error("Password reset email failed for user " + studentInThisEmail.id, err);
   }

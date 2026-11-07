@@ -1,4 +1,5 @@
 import { getAccessContext } from "../../utils/helper-functions.utils.js";
+import { isStudentRequest } from "../../utils/notice-visibility.utils.js";
 import Responses from "../../utils/responses.utils.js";
 import AnnouncementService from "./announcement.service.js";
 
@@ -21,7 +22,8 @@ const getAnnouncementById = async (req, res) => {
   const id = Number(req.params.id);
 
   const hostelId = accessContext.loggedInAdminHostelId ?? accessContext.loggedInStudentHostelId;
-  const announcement = await AnnouncementService.getAnnouncementById(id, hostelId);
+  //students can open only live announcements
+  const announcement = await AnnouncementService.getAnnouncementById(id, hostelId, isStudentRequest(accessContext));
 
   return Responses.successResponse(res, "Announcement fetched successfully", announcement);
 };

@@ -16,6 +16,7 @@ import upcomingEventsRouter from "./modules/upcoming-events/upcoming-events.rout
 import MessFeeRouter from "./modules/mess-fees/mess-fee.routes.js";
 import cors from "cors";
 import announcementRouter from "./modules/announcements/announcement.routes.js";
+import appLinksRouter from "./modules/app-links/app-links.routes.js";
 
 const app = express();
 
@@ -61,6 +62,9 @@ app.use(`${prefix_api}/upcoming_events`, upcomingEventsRouter);
 
 app.use(`${prefix_api}/mess_fee`, MessFeeRouter);
 app.use(`${prefix_api}/announcements`, announcementRouter);
+
+//public pages behind the links in activation / reset emails (opens the app), and Android App Links verification
+app.use(appLinksRouter);
 
 app.use(gloabalErrorHandlerMiddleware);
 
