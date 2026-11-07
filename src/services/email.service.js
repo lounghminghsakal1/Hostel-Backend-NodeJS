@@ -34,7 +34,20 @@ const sendEmail = async (toAddress, subject, text, html) => {
     },
   });
 
-  return await sesClient.send(command);
+  //log every attempt's outcome, so pm2 logs show exactly why an email failed (SES error name/message, region, sender)
+  const region = await sesClient.config.region();
+  try {
+    const result = await sesClient.send(command);
+    console.log(`[EMAIL] sent to ${toAddress} via SES ${region} (MessageId ${result.MessageId}): "${subject}"`);
+    return result;
+  } catch (err) {
+    console.error(
+      `[EMAIL] FAILED to ${toAddress} via SES ${region} from ${envValues.AWS_SES_FROM_EMAIL}: ` +
+      `${err?.name ?? "Error"}: ${err?.message ?? err} ` +
+      `(HTTP ${err?.$metadata?.httpStatusCode ?? "-"}, request ${err?.$metadata?.requestId ?? "-"})`
+    );
+    throw err;
+  }
 };
 
 //a plain reason an admin can act on, from an Amazon SES error
