@@ -18,6 +18,7 @@ import cors from "cors";
 import announcementRouter from "./modules/announcements/announcement.routes.js";
 import appLinksRouter from "./modules/app-links/app-links.routes.js";
 import healthRouter from "./modules/health/health.routes.js";
+import websiteRouter from "./modules/website/website.routes.js";
 
 const app = express();
 
@@ -35,19 +36,30 @@ app.use(cors({
   origin: allowedOrigins
 }));
 
-app.use(`${prefix_api}/auth`, authRouter);
+//every API endpoint shared by the mobile app and the website, mounted under each client's namespace below
+const apiRouter = express.Router();
+apiRouter.use("/auth", authRouter);
+apiRouter.use("/hostel_admin", hostelAdminRouter);
+apiRouter.use("/students", studentRouter);
+apiRouter.use("/hostels", hostelRouter);
+apiRouter.use("/rooms", roomsRouter);
+apiRouter.use("/leave_applications", leaveApplicationRouter);
+apiRouter.use("/media", UploadDownloadRouter);
+apiRouter.use("/attendance_records", attendanceRecordsRouter);
+apiRouter.use("/upcoming_events", upcomingEventsRouter);
+apiRouter.use("/mess_fee", MessFeeRouter);
+apiRouter.use("/announcements", announcementRouter);
 
-app.use(`${prefix_api}/hostel_admin`, hostelAdminRouter);
+//website: its own extra endpoints first (dashboard, summaries, export...), then the shared ones
+app.use(`${prefix_api}/website`, websiteRouter);
+app.use(`${prefix_api}/website`, apiRouter);
 
-app.use(`${prefix_api}/students`, studentRouter);
+//mobile app
+app.use(`${prefix_api}/mobile`, apiRouter);
 
-app.use(`${prefix_api}/hostels`, hostelRouter);
-
-app.use(`${prefix_api}/rooms`, roomsRouter);
-
-app.use(`${prefix_api}/leave_applications`, leaveApplicationRouter);
-
-app.use(`${prefix_api}/media`, UploadDownloadRouter);
+//legacy paths without a client prefix (e.g. /api/v1/students): installed app versions still use them.
+//remove once every app in use calls /mobile
+app.use(prefix_api, apiRouter);
 
 const __fileName = fileURLToPath(import.meta.url);
 const __dirName = path.dirname(__fileName);
@@ -56,13 +68,6 @@ app.use(
   "/uploaded-files",
   express.static(path.join(__dirName, "../uploaded-files"))
 );
-
-app.use(`${prefix_api}/attendance_records`, attendanceRecordsRouter);
-
-app.use(`${prefix_api}/upcoming_events`, upcomingEventsRouter);
-
-app.use(`${prefix_api}/mess_fee`, MessFeeRouter);
-app.use(`${prefix_api}/announcements`, announcementRouter);
 
 //public pages behind the links in activation / reset emails (opens the app), and Android App Links verification
 app.use(appLinksRouter);

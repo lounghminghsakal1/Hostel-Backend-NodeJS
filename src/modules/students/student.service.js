@@ -387,7 +387,8 @@ const sendActivationLinkMail = async (accessContext, studentProfileId) => {
   } catch (err) {
     console.error("Activation email failed for user " + student.user.id, err);
     //tell the admin why (e.g. Amazon SES still in sandbox mode) instead of "something went wrong"
-    throw createHttpError(502, `Couldn't send the activation email: ${describeEmailError(err)}.`, { errors: "Email not sent" });
+    //503, not 502: Cloudflare replaces an origin's 502 with its own error page, which hides this message from the admin
+    throw createHttpError(503, `Couldn't send the activation email: ${describeEmailError(err)}.`, { errors: "Email not sent" });
   }
 
   return "Account activation email sent";
